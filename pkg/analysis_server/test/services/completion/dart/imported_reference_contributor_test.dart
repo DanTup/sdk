@@ -40,7 +40,7 @@ bool foo(int bar, {bool boo, @required int baz}) => false;
 ''');
 
     addTestSource('''
-import "/testB.dart";
+import "${convertPathForImport('/testB.dart')}";
 
 void main() {f^}''');
     await computeSuggestions();

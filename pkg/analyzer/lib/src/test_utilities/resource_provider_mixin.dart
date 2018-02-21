@@ -65,4 +65,24 @@ class ResourceProviderMixin {
           .join(part1, part2, part3, part4, part5, part6, part7, part8);
 
   String convertPath(String path) => resourceProvider.convertPath(path);
+
+  /// Convert the given [path] to be a valid import uri for this provider's path context.
+  ///
+  /// Paths on Windows are normally converted to C:\file.dart however it's not
+  /// valid to use a path like that in an import in Dart, you must instead do
+  /// `import "/C:/file.dart"`
+  String convertPathForImport(String path) {
+    path = resourceProvider.convertPath(path);
+    // TODO(dantup): Is there a better way to check this is Windows and absolute?
+    //     absolutePathContext has an _isAbsolute method that's private.
+    // Should this be pushed down into the path context? Is there
+    //     already code somewhere that can convert a Windows absolute path into one
+    //     valid for import?
+    if (resourceProvider.absolutePathContext.isValid(path) &&
+        !path.startsWith("/")) {
+      path = '/${path.replaceAll('\\', '/')}';
+    }
+
+    return path;
+  }
 }
