@@ -806,6 +806,16 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
     return expectSuccessfulResponseTo<List<Location>>(request);
   }
 
+  Future<SemanticTokens> getSemanticTokens(Uri uri) {
+    final request = makeRequest(
+      Method.textDocument_semanticTokens_full,
+      SemanticTokensParams(
+        textDocument: TextDocumentIdentifier(uri: uri.toString()),
+      ),
+    );
+    return expectSuccessfulResponseTo<SemanticTokens>(request);
+  }
+
   Future<SignatureHelp> getSignatureHelp(Uri uri, Position pos) {
     final request = makeRequest(
       Method.textDocument_signatureHelp,

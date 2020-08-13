@@ -41,7 +41,7 @@ class InitializationTest extends AbstractLspAnalysisServerTest {
                   emptyTextDocumentClientCapabilities))),
     );
 
-    // Because we support dynamic registration for synchronisation, we won't send
+    // Because we support dynamic registration for synchronization, we won't send
     // static registrations for them.
     // https://github.com/dart-lang/sdk/issues/38490
     InitializeResult initResult = initResponse.result;
@@ -50,7 +50,7 @@ class InitializationTest extends AbstractLspAnalysisServerTest {
     expect(initResult.capabilities, isNotNull);
     expect(initResult.capabilities.textDocumentSync, isNull);
 
-    // Should container Hover, DidOpen, DidClose, DidChange.
+    // Should contain Hover, DidOpen, DidClose, DidChange.
     expect(registrations, hasLength(4));
     final hover =
         registrationOptionsFor(registrations, Method.textDocument_hover);
@@ -118,6 +118,7 @@ class InitializationTest extends AbstractLspAnalysisServerTest {
     expect(initResult.capabilities.codeActionProvider, isNotNull);
     expect(initResult.capabilities.renameProvider, isNotNull);
     expect(initResult.capabilities.foldingRangeProvider, isNotNull);
+    expect(initResult.capabilities.semanticTokensProvider, isNotNull);
 
     expect(didGetRegisterCapabilityRequest, isFalse);
   }
@@ -167,6 +168,7 @@ class InitializationTest extends AbstractLspAnalysisServerTest {
     expect(initResult.capabilities.codeActionProvider, isNull);
     expect(initResult.capabilities.renameProvider, isNull);
     expect(initResult.capabilities.foldingRangeProvider, isNull);
+    expect(initResult.capabilities.semanticTokensProvider, isNull);
 
     // Ensure all expected dynamic registrations.
     for (final expectedRegistration in ClientDynamicRegistrations.supported) {

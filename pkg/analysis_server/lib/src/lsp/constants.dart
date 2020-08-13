@@ -63,6 +63,11 @@ abstract class CustomMethods {
   static const AnalyzerStatus = Method(r'$/analyzerStatus');
 }
 
+abstract class CustomSemanticTokenTypes {
+  static const annotation = SemanticTokenTypes('annotation');
+  static const boolean = SemanticTokenTypes('boolean');
+}
+
 /// CodeActionKinds supported by the server that are not declared in the LSP spec.
 abstract class DartCodeActionKind {
   /// A list of all supported CodeAction kinds, supplied to the client during

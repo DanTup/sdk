@@ -6,6 +6,7 @@ import 'package:analysis_server/lsp_protocol/protocol_generated.dart';
 import 'package:analysis_server/lsp_protocol/protocol_special.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/lsp_analysis_server.dart';
+import 'package:analysis_server/src/lsp/semantic_tokens/legend.dart';
 
 /// Helper for reading client dynamic registrations which may be ommitted by the
 /// client.
@@ -13,7 +14,7 @@ class ClientDynamicRegistrations {
   /// All dynamic registrations supported by the Dart LSP server.
   ///
   /// Anything listed here and supported by the client will not send a static
-  /// registration but intead dynamically register (usually only for a subset of
+  /// registration but instead dynamically register (usually only for a subset of
   /// files such as for .dart/pubspec.yaml/etc).
   ///
   /// When adding new capabilities that will be registered dynamically, the
@@ -34,6 +35,7 @@ class ClientDynamicRegistrations {
     Method.textDocument_codeAction,
     Method.textDocument_rename,
     Method.textDocument_foldingRange,
+    Method.textDocument_semanticTokens_full,
   ];
   final ClientCapabilities _capabilities;
 
@@ -76,6 +78,9 @@ class ClientDynamicRegistrations {
 
   bool get rename =>
       _capabilities.textDocument?.rename?.dynamicRegistration ?? false;
+
+  bool get semanticTokens =>
+      _capabilities.textDocument?.semanticTokens?.dynamicRegistration ?? false;
 
   bool get signatureHelp =>
       _capabilities.textDocument?.signatureHelp?.dynamicRegistration ?? false;
@@ -192,6 +197,17 @@ class ServerCapabilitiesComputer {
           : Either3<bool, FoldingRangeOptions,
               FoldingRangeRegistrationOptions>.t1(
               true,
+            ),
+      semanticTokensProvider: dynamicRegistrations.semanticTokens
+          ? null
+          : Either2<SemanticTokensOptions,
+              SemanticTokensRegistrationOptions>.t1(
+              SemanticTokensOptions(
+                legend: semanticTokenLegend.lspLegend,
+                full: Either2<bool, SemanticTokensOptionsFull>.t2(
+                  SemanticTokensOptionsFull(delta: false),
+                ),
+              ),
             ),
       executeCommandProvider: ExecuteCommandOptions(
         commands: Commands.serverSupportedCommands,
@@ -356,6 +372,17 @@ class ServerCapabilitiesComputer {
     register(
       dynamicRegistrations.didChangeConfiguration,
       Method.workspace_didChangeConfiguration,
+    );
+    register(
+      dynamicRegistrations.semanticTokens,
+      Method.textDocument_semanticTokens_full,
+      SemanticTokensRegistrationOptions(
+        documentSelector: allTypes,
+        legend: semanticTokenLegend.lspLegend,
+        full: Either2<bool, SemanticTokensOptionsFull>.t2(
+          SemanticTokensOptionsFull(delta: false),
+        ),
+      ),
     );
 
     await _applyRegistrations(registrations);
