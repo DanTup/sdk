@@ -221,6 +221,12 @@ mixin ClientCapabilitiesHelperMixin {
       'codeAction': {'dynamicRegistration': true},
       'rename': {'dynamicRegistration': true},
       'foldingRange': {'dynamicRegistration': true},
+      'semanticTokens': SemanticTokensClientCapabilities(
+          dynamicRegistration: true,
+          requests: SemanticTokensClientCapabilitiesRequests(),
+          formats: [],
+          tokenModifiers: [],
+          tokenTypes: []).toJson(),
     });
   }
 
@@ -993,6 +999,16 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
     );
     return expectSuccessfulResponseTo(
         request, _fromJsonList(Location.fromJson));
+  }
+
+  Future<SemanticTokens> getSemanticTokens(Uri uri) {
+    final request = makeRequest(
+      Method.textDocument_semanticTokens_full,
+      SemanticTokensParams(
+        textDocument: TextDocumentIdentifier(uri: uri.toString()),
+      ),
+    );
+    return expectSuccessfulResponseTo(request, SemanticTokens.fromJson);
   }
 
   Future<SignatureHelp> getSignatureHelp(Uri uri, Position pos,
