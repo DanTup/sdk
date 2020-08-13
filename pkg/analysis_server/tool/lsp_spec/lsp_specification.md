@@ -1,5 +1,5 @@
 This is an unmodified copy of the Language Server Protocol Specification,
-downloaded from https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/specification-3-15.md. It is the version of the specification that was
+downloaded from https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/specification-3-16.md. It is the version of the specification that was
 used to generate a portion of the Dart code used to support the protocol.
 
 To regenerate the generated code, run the script in
@@ -10,8 +10,8 @@ code, run the same script with an argument of "--download".
 ---
 
 Copyright (c) Microsoft Corporation.
-
-All rights reserved.
+ 
+All rights reserved. 
 
 Distributed under the following terms:
 
@@ -22,24 +22,25 @@ Distributed under the following terms:
 
 ---
 title: Specification
-shortTitle: 3.15 - Current
+shortTitle: 3.16 - Upcoming
 layout: specifications
-sectionid: specification-3-15
-toc: specification-3-15-toc
+sectionid: specification-3-16
+toc: specification-3-16-toc
 index: 2
 ---
-# Language Server Protocol Specification - 3.15
+# Language Server Protocol Specification - 3.16
 
-This document describes the 3.15.x version of the language server protocol. An implementation for node of the 3.15.x version of the protocol can be found [here](https://github.com/Microsoft/vscode-languageserver-node).
+This document describes the upcoming 3.16.x version of the language server protocol. An implementation for node of the 3.16.x version of the protocol can be found [here](https://github.com/Microsoft/vscode-languageserver-node).
 
-**Note:** edits to this specification can be made via a pull request against this markdown [document](https://github.com/Microsoft/language-server-protocol/blob/gh-pages/_specifications/specification-3-15.md).
+**Note:** edits to this specification can be made via a pull request against this markdown [document](https://github.com/Microsoft/language-server-protocol/blob/gh-pages/_specifications/specification-3-16.md).
 
-## <a href="#whatIsNew" name="whatIsNew" class="anchor"> What's new in 3.15 </a>
+## <a href="#whatIsNew" name="whatIsNew" class="anchor"> What's new in 3.16 </a>
 
-All new 3.15 features are tagged with a corresponding since version 3.15 text or in JSDoc using `@since 3.15.0` annotation. Major new feature are:
+All new 3.16 features are tagged with a corresponding since version 3.16 text or in JSDoc using `@since 3.16.0` annotation. Major new feature are:
 
-- [general progress support](#progress), [work done progress](#workDoneProgress) and [partial result progress](#partialResults)
-- support for [selection ranges](#textDocument_selectionRange)
+- Call Hierarchy support
+- Semantic Token support
+- Better trace logging support
 
 ## <a href="#baseProtocol" name="baseProtocol" class="anchor"> Base Protocol </a>
 
@@ -1216,7 +1217,19 @@ Server initiated work done progress works the same. The only difference is that 
 
 ##### <a href="#signalingWorkDoneProgressReporting" name="signalingWorkDoneProgressReporting" class="anchor"> Signaling Work Done Progress Reporting </a>
 
-To keep the protocol backwards compatible servers are only allowed to use work done progress reporting if the client signals corresponding support using the client capability `window.workDoneProgress`.
+To keep the protocol backwards compatible servers are only allowed to use work done progress reporting if the client signals corresponding support using the client capability `window.workDoneProgress` which is defined as follows:
+
+```typescript
+	/**
+	 * Window specific client capabilities.
+	 */
+	window?: {
+		/**
+		 * Whether client supports handling progress notifications.
+		 */
+		workDoneProgress?: boolean;
+	}
+```
 
 To avoid that clients set up a progress monitor user interface before sending a request but the server doesn't actually report any progress a server needs to signal work done progress reporting in the corresponding server capability. For the above find references example a server would signal such a support by setting the `referencesProvider` property in the server capabilities as follows:
 
@@ -1297,6 +1310,15 @@ export interface PartialResultParams {
 	 */
 	partialResultToken?: ProgressToken;
 }
+```
+
+#### <a href="#traceValue" name="traceValue" class="anchor"> TraceValue </a>
+
+A `TraceValue` represents the level of verbosity with which the server systematically reports its execution trace using [$/logTrace](#logTrace) notifications.
+The initial trace value is set by the client at initialization and can be modified later using the [$/setTrace](#setTrace) notification.
+
+```typescript
+export type TraceValue = 'off' | 'message' | 'verbose'
 ```
 
 ### Actual Protocol
@@ -1389,7 +1411,7 @@ interface InitializeParams extends WorkDoneProgressParams {
 	/**
 	 * The initial trace setting. If omitted trace is disabled ('off').
 	 */
-	trace?: 'off' | 'messages' | 'verbose';
+	trace?: TraceValue;
 
 	/**
 	 * The workspace folders configured in the client when the server starts.
@@ -1532,6 +1554,13 @@ export interface TextDocumentClientCapabilities {
 	 * @since 3.15.0
 	 */
 	selectionRange?: SelectionRangeClientCapabilities;
+
+	/**
+	 * Capabilities specific to the `textDocument/semanticTokens/*` requests.
+	 *
+	 * @since 3.16.0
+	 */
+	semanticTokens?: SemanticTokensClientCapabilities;
 }
 ```
 
@@ -1807,6 +1836,13 @@ interface ServerCapabilities {
 	selectionRangeProvider?: boolean | SelectionRangeOptions | SelectionRangeRegistrationOptions;
 
 	/**
+	 * The server provides semantic tokens support.
+	 *
+	 * @since 3.16.0
+	 */
+	semanticTokensProvider?: SemanticTokensOptions | SemanticTokensRegistrationOptions;
+
+	/**
 	 * The server provides workspace symbol support.
 	 */
 	workspaceSymbolProvider?: boolean;
@@ -1863,6 +1899,50 @@ The server should exit with `success` code 0 if the shutdown request has been re
 _Notification_:
 * method: 'exit'
 * params: void
+
+#### <a href="#logTrace" name="logTrace" class="anchor">LogTrace Notification (:arrow_left:)</a>
+
+A notification to log the trace of the server's execution.
+The amount and content of these notifications depends on the current `trace` configuration.
+If `trace` is `'off'`, the server should not send any `logTrace` notification.
+If `trace` is `'message'`, the server should not add the `'verbose'` field in the `logTraceParams`.
+
+`$/logTrace` should be used for systematic trace reporting. For single debugging messages, the server should send [`window/logMessage`](#window_logMessage) notifications.
+
+
+_Notification_:
+* method: '$/logTrace'
+* params: `logTraceParams` defined as follows:
+
+```typescript
+interface logTraceParams {
+	/**
+	 * The message to be logged.
+	 */
+	message: string;
+	/**
+	 * Additional information that can be computed if the `trace` configuration is set to `'verbose'`
+	 */
+	verbose?: string;
+}
+```
+
+#### <a href="#setTrace" name="setTrace" class="anchor">SetTrace Notification (:arrow_right:)</a>
+
+A notification that should be used by the client to modify the trace setting of the server.
+
+_Notification_:
+* method: '$/setTrace'
+* params: `setTraceParams` defined as follows:
+
+```typescript
+interface setTraceParams {
+	/**
+	 * The new value that should be assigned to the trace setting.
+	 */
+	value: TraceValue;
+}
+```
 
 #### <a href="#window_showMessage" name="window_showMessage" class="anchor">ShowMessage Notification (:arrow_left:)</a>
 
@@ -2279,7 +2359,7 @@ interface DidChangeConfigurationParams {
 
 The `workspace/configuration` request is sent from the server to the client to fetch configuration settings from the client. The request can fetch several configuration settings in one roundtrip. The order of the returned configuration settings correspond to the order of the passed `ConfigurationItems` (e.g. the first item in the response is the result for the first configuration item in the params).
 
-A `ConfigurationItem` consists of the configuration section to ask for and an additional scope URI. The configuration section ask for is defined by the server and doesn't necessarily need to correspond to the configuration store used be the client. So a server might ask for a configuration `cpp.formatterOptions` but the client stores the configuration in a XML store layout differently. It is up to the client to do the necessary conversion. If a scope URI is provided the client should return the setting scoped to the provided resource. If the client for example uses [EditorConfig](http://editorconfig.org/) to manage its settings the configuration should be returned for the passed resource URI. If the client can't provide a configuration setting for a given scope then `null` need to be present in the returned array.
+A `ConfigurationItem` consists of the configuration section to ask for and an additional scope URI. The configuration section asked for is defined by the server and doesn't necessarily need to correspond to the configuration store used be the client. So a server might ask for a configuration `cpp.formatterOptions` but the client stores the configuration in an XML store layout differently. It is up to the client to do the necessary conversion. If a scope URI is provided the client should return the setting scoped to the provided resource. If the client for example uses [EditorConfig](http://editorconfig.org/) to manage its settings the configuration should be returned for the passed resource URI. If the client can't provide a configuration setting for a given scope then `null` needs to be present in the returned array.
 
 _Client Capability_:
 * property path (optional): `workspace.configuration`
@@ -2469,6 +2549,19 @@ interface WorkspaceSymbolClientCapabilities {
 		 */
 		valueSet?: SymbolKind[];
 	}
+
+	/**
+	 * The client supports tags on `SymbolInformation`.
+	 * Clients supporting tags have to handle unknown tags gracefully.
+	 *
+	 * @since 3.16.0
+	 */
+	tagSupport?: {
+		/**
+		 * The tags supported by the client.
+		 */
+		valueSet: SymbolTag[]
+	}
 }
 ```
 
@@ -2627,15 +2720,15 @@ export interface ApplyWorkspaceEditResponse {
 
 #### <a href="#textDocument_synchronization" name="textDocument_synchronization" class="anchor">Text Document Synchronization</a>
 
-Client support for `textDocument/open`, `textDocument/change` and `textDocument/close` notifications is mandatory in the protocol and clients can not opt out supporting them. This includes both full and incremental syncronization in the `textDocument/change` notification. In addition a server must either implement all three of them or none. Their capabilities are therefore controlled via a combined client and server capability.
+Client support for `textDocument/didOpen`, `textDocument/didChange` and `textDocument/didClose` notifications is mandatory in the protocol and clients can not opt out supporting them. This includes both full and incremental synchronization in the `textDocument/didChange` notification. In addition a server must either implement all three of them or none. Their capabilities are therefore controlled via a combined client and server capability.
 
-<a href="#textDocument_synchronization_cc" name="textDocument_synchronization_cc" class="anchor"></a>_Client Capability_:
+<a href="#textDocument_synchronization_cc" name="textDocument_synchronization_cc" class="anchor">_Client Capability_:</a>
 * property path (optional): `textDocument.synchronization.dynamicRegistration`
 * property type: `boolean`
 
 Controls whether text document synchronization supports dynamic registration.
 
-<a href="#textDocument_synchronization_sc" name="textDocument_synchronization_sc" class="anchor"></a>_Server Capability_:
+<a href="#textDocument_synchronization_sc" name="textDocument_synchronization_sc" class="anchor">_Server Capability_:</a>
 * property path (optional): `textDocumentSync`
 * property type: `TextDocumentSyncKind | TextDocumentSyncOptions`. The below definition of the `TextDocumentSyncOptions` only covers the properties specific to the open, change and close notifications. A complete definition covering all properties can be found [here](#textDocument_didClose):
 
@@ -2751,7 +2844,7 @@ interface DidChangeTextDocumentParams {
 	 *
 	 * To mirror the content of a document using change events use the following approach:
 	 * - start with the same initial content
-	 * - apply the 'textDocument/didChange' notifications in the order you recevie them.
+	 * - apply the 'textDocument/didChange' notifications in the order you receive them.
 	 * - apply the `TextDocumentContentChangeEvent`s in a single notification in the order
 	 *   you receive them.
 	 */
@@ -3106,7 +3199,7 @@ interface PublishDiagnosticsParams {
 
 #### <a href="#textDocument_completion" name="textDocument_completion" class="anchor">Completion Request (:leftwards_arrow_with_hook:)</a>
 
-The Completion request is sent from the client to the server to compute completion items at a given cursor position. Completion items are presented in the [IntelliSense](https://code.visualstudio.com/docs/editor/editingevolved#_intellisense) user interface. If computing full completion items is expensive, servers can additionally provide a handler for the completion item resolve request ('completionItem/resolve'). This request is sent when a completion item is selected in the user interface. A typical use case is for example: the 'textDocument/completion' request doesn't fill in the `documentation` property for returned completion items since it is expensive to compute. When the item is selected in the user interface then a 'completionItem/resolve' request is sent with the selected completion item as a parameter. The returned completion item should have the documentation property filled in. The request can only delay the computation of the `detail` and `documentation` properties. Other properties like `sortText`, `filterText`, `insertText`, `textEdit` and `additionalTextEdits` must be provided in the `textDocument/completion` response and must not be changed during resolve.
+The Completion request is sent from the client to the server to compute completion items at a given cursor position. Completion items are presented in the [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense) user interface. If computing full completion items is expensive, servers can additionally provide a handler for the completion item resolve request ('completionItem/resolve'). This request is sent when a completion item is selected in the user interface. A typical use case is for example: the 'textDocument/completion' request doesn't fill in the `documentation` property for returned completion items since it is expensive to compute. When the item is selected in the user interface then a 'completionItem/resolve' request is sent with the selected completion item as a parameter. The returned completion item should have the documentation property filled in. By default the request can only delay the computation of the `detail` and `documentation` properties. Whether the server can delay the computation of `additionalTextEdits` depends on the presence of the `resolveAdditionalTextEditsSupport` client capability. If provided and set to `true` a server can delay the computation as well. Other properties like `sortText`, `filterText`, `insertText` and `textEdit` must be provided in the `textDocument/completion` response and must not be changed during resolve.
 
 _Client Capability_:
 * property name (optional): `textDocument.completion`
@@ -3169,6 +3262,22 @@ export interface CompletionClientCapabilities {
 			 */
 			valueSet: CompletionItemTag[]
 		}
+
+		/**
+		 * Client support insert replace edit to control different behavior if a
+		 * completion item is inserted in the text or should replace text.
+		 *
+		 * @since 3.16.0 - Proposed state
+		 */
+		insertReplaceSupport?: boolean;
+
+		/**
+		 * Client supports to resolve `additionalTextEdits` in the `completionItem/resolve`
+		 * request. So servers can postpone computing them.
+		 *
+		 * @since 3.16.0 - Proposed state
+		 */
+		resolveAdditionalTextEditsSupport?: boolean;
 	};
 
 	completionItemKind?: {
@@ -3731,6 +3840,14 @@ export interface SignatureHelpClientCapabilities {
 			 */
 			labelOffsetSupport?: boolean;
 		};
+
+		/**
+		 * The client support the `activeParameter` property on `SignatureInformation`
+		 * literal.
+		 *
+		 * @since 3.16.0 - proposed state
+		 */
+		activeParameterSupport?: boolean;
 	};
 
 	/**
@@ -3858,7 +3975,7 @@ _Response_:
  */
 export interface SignatureHelp {
 	/**
-	 * One or more signatures. If no signaures are availabe the signature help
+	 * One or more signatures. If no signatures are available the signature help
 	 * request should return `null`.
 	 */
 	signatures: SignatureInformation[];
@@ -3910,6 +4027,15 @@ export interface SignatureInformation {
 	 * The parameters of this signature.
 	 */
 	parameters?: ParameterInformation[];
+
+	/**
+	 * The index of the active parameter.
+	 *
+	 * If provided, this is used in place of `SignatureHelp.activeParameter`.
+	 *
+	 * @since 3.16.0 - proposed state
+	 */
+	activeParameter?: number;
 }
 
 /**
@@ -4352,6 +4478,20 @@ export interface DocumentSymbolClientCapabilities {
 	 * The client supports hierarchical document symbols.
 	 */
 	hierarchicalDocumentSymbolSupport?: boolean;
+
+	/**
+	 * The client supports tags on `SymbolInformation`. Tags are supported on
+	 * `DocumentSymbol` if `hierarchicalDocumentSymbolSupport` is set to true.
+	 * Clients supporting tags have to handle unknown tags gracefully.
+	 *
+	 * @since 3.16.0
+	 */
+	tagSupport?: {
+		/**
+		 * The tags supported by the client.
+		 */
+		valueSet: SymbolTag[]
+	}
 }
 ```
 
@@ -4420,6 +4560,22 @@ export namespace SymbolKind {
 }
 
 /**
+ * Symbol tags are extra annotations that tweak the rendering of a symbol.
+ *
+ * @since 3.16
+ */
+export namespace SymbolTag {
+
+	/**
+	 * Render a symbol as obsolete, usually using a strike-out.
+	 */
+	export const Deprecated: 1 = 1;
+}
+
+export type SymbolTag = 1;
+
+
+/**
  * Represents programming constructs like variables, classes, interfaces etc. that appear in a document. Document symbols can be
  * hierarchical and they have two ranges: one that encloses its definition and one that points to its most interesting range,
  * e.g. the range of an identifier.
@@ -4443,7 +4599,16 @@ export interface DocumentSymbol {
 	kind: SymbolKind;
 
 	/**
+	 * Tags for this completion item.
+	 *
+	 * @since 3.16.0
+	 */
+	tags?: SymbolTag[];
+
+	/**
 	 * Indicates if this symbol is deprecated.
+	 *
+	 * @deprecated Use tags instead
 	 */
 	deprecated?: boolean;
 
@@ -4482,7 +4647,16 @@ export interface SymbolInformation {
 	kind: SymbolKind;
 
 	/**
+	 * Tags for this completion item.
+	 *
+	 * @since 3.16.0
+	 */
+	tags?: SymbolTag[];
+
+	/**
 	 * Indicates if this symbol is deprecated.
+	 *
+	 * @deprecated Use tags instead
 	 */
 	deprecated?: boolean;
 
@@ -5598,7 +5772,7 @@ export interface SelectionRangeRegistrationOptions extends SelectionRangeOptions
 _Request_:
 
 * method: 'textDocument/selectionRange'
-* params: `SelectionRangeParams` defined as follows
+* params: `SelectionRangeParams` defined as follows:
 
 ```typescript
 export interface SelectionRangeParams extends WorkDoneProgressParams, PartialResultParams {
@@ -5615,6 +5789,7 @@ export interface SelectionRangeParams extends WorkDoneProgressParams, PartialRes
 ```
 
 _Response_:
+
 * result: `SelectionRange[] | null` defined as follows:
 
 ```typescript
@@ -5633,6 +5808,571 @@ export interface SelectionRange {
 * partial result: `SelectionRange[]`
 * error: code and message set in case an exception happens during the 'textDocument/selectionRange' request
 
+#### <a href="#textDocument_prepareCallHierarchy" name="textDocument_prepareCallHierarchy" class="anchor">Prepare Call Hierarchy Request (:leftwards_arrow_with_hook:)</a>
+
+> *Since version 3.16.0*
+
+The call hierarchy request is sent from the client to the server to return a call hierarchy for the language element of given text document positions. The call hierarchy requests are executed in two steps:
+
+  1. first a call hierarchy item is resolved for the given text document position
+  1. for a call hierarchy item the incoming or outgoing call hierarchy items are resolved.
+
+_Client Capability_:
+
+* property name (optional): `textDocument.callHierarchy`
+* property type: `CallHierarchyClientCapabilities` defined as follows:
+
+```typescript
+interface CallHierarchyClientCapabilities {
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to `true`
+	 * the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+	 * return value for the corresponding server capability as well.
+	 */
+	dynamicRegistration?: boolean;
+}
+```
+
+_Server Capability_:
+
+* property name (optional): `callHierarchyProvider`
+* property type: `boolean | CallHierarchyOptions | CallHierarchyRegistrationOptions` where `CallHierarchyOptions` is defined as follows:
+
+```typescript
+export interface CallHierarchyOptions extends WorkDoneProgressOptions {
+}
+```
+
+_Registration Options_: `CallHierarchyRegistrationOptions` defined as follows:
+
+```typescript
+export interface CallHierarchyRegistrationOptions extends TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions {
+}
+```
+
+_Request_:
+
+* method: 'textDocument/prepareCallHierarchy'
+* params: `CallHierarchyPrepareParams` defined as follows:
+
+```typescript
+export interface CallHierarchyPrepareParams extends TextDocumentPositionParams, WorkDoneProgressParams {
+}
+```
+
+_Response_:
+
+* result: `CallHierarchyItem[] | null` defined as follows:
+
+```typescript
+export interface CallHierarchyItem {
+	/**
+	 * The name of this item.
+	 */
+	name: string;
+
+	/**
+	 * The kind of this item.
+	 */
+	kind: SymbolKind;
+
+	/**
+	 * Tags for this item.
+	 */
+	tags?: SymbolTag[];
+
+	/**
+	 * More detail for this item, e.g. the signature of a function.
+	 */
+	detail?: string;
+
+	/**
+	 * The resource identifier of this item.
+	 */
+	uri: DocumentUri;
+
+	/**
+	 * The range enclosing this symbol not including leading/trailing whitespace but everything else, e.g. comments and code.
+	 */
+	range: Range;
+
+	/**
+	 * The range that should be selected and revealed when this symbol is being picked, e.g. the name of a function.
+	 * Must be contained by the [`range`](#CallHierarchyItem.range).
+	 */
+	selectionRange: Range;
+}
+```
+
+* error: code and message set in case an exception happens during the 'textDocument/prepareCallHierarchy' request
+
+#### <a href="#callHierarchy_incomingCalls" name="callHierarchy_incomingCalls" class="anchor">Call Hierarchy Incoming Calls (:leftwards_arrow_with_hook:)</a>
+
+> *Since version 3.16.0*
+
+The request is sent from the client to the server to resolve incoming calls for a given call hierarchy item. The request doesn't define its own client and server capabilities. It is only issued if a server registers for the [`textDocument/prepareCallHierarchy` request](#textDocument_prepareCallHierarchy).
+
+_Request_:
+
+* method: 'callHierarchy/incomingCalls'
+* params: `CallHierarchyIncomingCallsParams` defined as follows:
+
+```typescript
+export interface CallHierarchyIncomingCallsParams extends WorkDoneProgressParams, PartialResultParams {
+	item: CallHierarchyItem;
+}
+```
+
+_Response_:
+
+* result: `CallHierarchyIncomingCall[] | null` defined as follows:
+
+```typescript
+export interface CallHierarchyIncomingCall {
+
+	/**
+	 * The item that makes the call.
+	 */
+	from: CallHierarchyItem;
+
+	/**
+	 * The ranges at which the calls appear. This is relative to the caller
+	 * denoted by [`this.from`](#CallHierarchyIncomingCall.from).
+	 */
+	fromRanges: Range[];
+}
+```
+
+* partial result: `CallHierarchyIncomingCall[]`
+* error: code and message set in case an exception happens during the 'callHierarchy/incomingCalls' request
+
+#### <a href="#callHierarchy_outgoingCalls" name="callHierarchy_outgoingCalls" class="anchor">Call Hierarchy Outgoing Calls (:leftwards_arrow_with_hook:)</a>
+
+> *Since version 3.16.0*
+
+The request is sent from the client to the server to resolve outgoing calls for a given call hierarchy item. The request doesn't define its own client and server capabilities. It is only issued if a server registers for the [`textDocument/prepareCallHierarchy` request](#textDocument_prepareCallHierarchy).
+
+_Request_:
+
+* method: 'callHierarchy/outgoingCalls'
+* params: `CallHierarchyOutgoingCallsParams` defined as follows:
+
+```typescript
+export interface CallHierarchyOutgoingCallsParams extends WorkDoneProgressParams, PartialResultParams {
+	item: CallHierarchyItem;
+}
+```
+
+_Response_:
+
+* result: `CallHierarchyOutgoingCall[] | null` defined as follows:
+
+```typescript
+export interface CallHierarchyOutgoingCall {
+
+	/**
+	 * The item that is called.
+	 */
+	to: CallHierarchyItem;
+
+	/**
+	 * The range at which this item is called. This is the range relative to the caller, e.g the item
+	 * passed to [`provideCallHierarchyOutgoingCalls`](#CallHierarchyItemProvider.provideCallHierarchyOutgoingCalls)
+	 * and not [`this.to`](#CallHierarchyOutgoingCall.to).
+	 */
+	fromRanges: Range[];
+}
+```
+
+* partial result: `CallHierarchyOutgoingCall[]`
+* error: code and message set in case an exception happens during the 'callHierarchy/outgoingCalls' request
+
+#### <a href="#textDocument_semanticTokens" name="textDocument_semanticTokens" class="anchor">Semantic Tokens (:leftwards_arrow_with_hook:)</a>
+
+> *Since version 3.16.0*
+
+The request is sent from the client to the server to resolve semantic tokens for a given file. Semantic tokens are used to add additional color information to a file that depends on language specific symbol information. A semantic token request usually produces a large result. The protocol therefore supports encoding tokens with numbers. In addition optional support for deltas is available.
+
+_General Concepts_
+
+Tokens are represented using one token type combined with n token modiifiers. A token type is something like `class` or `function` and token modifiers are like `static` or `async`. The protocol defines a set of token types and modifiers but clients are allowed to extend these and announce the values they support in the corresponding client capability. The predefined values are:
+
+```typescript
+export enum SemanticTokenTypes {
+	namespace = 'namespace',
+	type = 'type',
+	class = 'class',
+	enum = 'enum',
+	interface = 'interface',
+	struct = 'struct',
+	typeParameter = 'typeParameter',
+	parameter = 'parameter',
+	variable = 'variable',
+	property = 'property',
+	enumMember = 'enumMember',
+	event = 'event',
+	function = 'function',
+	member = 'member',
+	macro = 'macro',
+	keyword = 'keyword',
+	modifier = 'modifier',
+	comment = 'comment',
+	string = 'string',
+	number = 'number',
+	regexp = 'regexp',
+	operator = 'operator'
+}
+
+export enum SemanticTokenModifiers {
+	declaration = 'declaration',
+	definition = 'definition',
+	readonly = 'readonly',
+	static = 'static',
+	deprecated = 'deprecated',
+	abstract = 'abstract',
+	async = 'async',
+	modification = 'modification',
+	documentation = 'documentation',
+	defaultLibrary = 'defaultLibrary'
+}
+```
+
+The protocol defines an additional token format capability to allow future extensions of the format. The only format that is currently specified is `relative` expressing that the tokens are described using relative positions (see Integer Encoding for Tokens below).
+
+```typescript
+export namespace TokenFormat {
+	export const Relative: 'relative' = 'relative';
+}
+
+export type TokenFormat = 'relative';
+```
+
+_Integer Encoding for Tokens_
+
+On the capability level types and modifiers are defined using strings. However the real encoding happens using numbers. The server therefore needs to let the client know which numbers it is using for which types and modifiers. They do so using a legend, which is defined as follows:
+
+```typescript
+export interface SemanticTokensLegend {
+	/**
+	 * The token types a server uses.
+	 */
+	tokenTypes: string[];
+
+	/**
+	 * The token modifiers a server uses.
+	 */
+	tokenModifiers: string[];
+}
+```
+
+Token types are looked up by index, so a `tokenType` value of `1` means `tokenTypes[1]`. Since a token type can have n modifiers, multiple token modifiers can be set by using bit flags,
+so a `tokenModifier` value of `3` is first viewed as binary `0b00000011`, which means `[tokenModifiers[0], tokenModifiers[1]]` because bits 0 and 1 are set.
+
+There are different way how the position of a token can be expressed in a file. Absolute positions or relative positons. The protocol for the token format `relative` uses relative positions, because most tokens remain stable relative to each other when edits are made in a file. This simplies the computation of a delta if a server supports it. So each token is represented using 5 integers. A specific token `i` in the file consists of the following array indices:
+
+- at index `5*i`   - `deltaLine`: token line number, relative to the previous token
+- at index `5*i+1` - `deltaStart`: token start character, relative to the previous token (relative to 0 or the previous token's start if they are on the same line)
+- at index `5*i+2` - `length`: the length of the token. A token cannot be multiline.
+- at index `5*i+3` - `tokenType`: will be looked up in `SemanticTokensLegend.tokenTypes`. We currently ask that `tokenType` < 65536.
+- at index `5*i+4` - `tokenModifiers`: each set bit will be looked up in `SemanticTokensLegend.tokenModifiers`
+
+Lets look at a concrete example for encoding a file with 3 tokens in a number array. We start with absolute positions to demonstrate how they can easily be transformed into relative positions:
+
+```typescript
+{ line: 2, startChar:  5, length: 3, tokenType: "property",  tokenModifiers: ["private", "static"] },
+{ line: 2, startChar: 10, length: 4, tokenType: "type",      tokenModifiers: [] },
+{ line: 5, startChar:  2, length: 7, tokenType: "class",     tokenModifiers: [] }
+```
+
+First of all, a legend must be devised. This legend must be provided up-front on registration and capture all possible token types and modifiers. For the example we use this legend:
+
+```typescript
+{
+   tokenTypes: ['property', 'type', 'class'],
+   tokenModifiers: ['private', 'static']
+}
+```
+
+The first transformation step is to encode `tokenType` and `tokenModifiers` as integers using the legend. As said, token types are looked up by index, so a `tokenType` value of `1` means `tokenTypes[1]`. Multiple token modifiers can be set by using bit flags, so a `tokenModifier` value of `3` is first viewed as binary `0b00000011`, which means `[tokenModifiers[0], tokenModifiers[1]]` because bits 0 and 1 are set. Using this legend, the tokens now are:
+
+```typescript
+{ line: 2, startChar:  5, length: 3, tokenType: 0, tokenModifiers: 3 },
+{ line: 2, startChar: 10, length: 4, tokenType: 1, tokenModifiers: 0 },
+{ line: 5, startChar:  2, length: 7, tokenType: 2, tokenModifiers: 0 }
+```
+
+The next step is to represent each token relative to the previous token in the file. In this case, the second token is on the same line as the first token, so the `startChar` of the second token is made relative to the `startChar` of the first token, so it will be `10 - 5`. The third token is on a different line than the second token, so the `startChar` of the third token will not be altered:
+
+```typescript
+{ deltaLine: 2, deltaStartChar: 5, length: 3, tokenType: 0, tokenModifiers: 3 },
+{ deltaLine: 0, deltaStartChar: 5, length: 4, tokenType: 1, tokenModifiers: 0 },
+{ deltaLine: 3, deltaStartChar: 2, length: 7, tokenType: 2, tokenModifiers: 0 }
+```
+
+Finally, the last step is to inline each of the 5 fields for a token in a single array, which is a memory friendly representation:
+
+```typescript
+// 1st token,  2nd token,  3rd token
+[  2,5,3,0,3,  0,5,4,1,0,  3,2,7,2,0 ]
+```
+
+Now assume that the user types a new empty line at the beginning of the file which results in the following tokens in the file:
+
+```typescript
+{ line: 3, startChar:  5, length: 3, tokenType: "property",  tokenModifiers: ["private", "static"] },
+{ line: 3, startChar: 10, length: 4, tokenType: "type",      tokenModifiers: [] },
+{ line: 6, startChar:  2, length: 7, tokenType: "class",     tokenModifiers: [] }
+```
+
+Running the same transformations as above will result in the following number array:
+
+```typescript
+// 1st token,  2nd token,  3rd token
+[  3,5,3,0,3,  0,5,4,1,0,  3,2,7,2,0]
+```
+
+The delta is now expressed on these number arrays without any form of interpretation what these numbers mean. This is comparable to the text document edits send from the server to the client to modify the content of a file. Those are character based and don't make any assumption about the meaning of the characters. So `[  2,5,3,0,3,  0,5,4,1,0,  3,2,7,2,0 ]` can be transformed into `[  3,5,3,0,3,  0,5,4,1,0,  3,2,7,2,0]` using the following edit description: `{ start:  0, deleteCount: 1, data: [3] }` which tells the client to simply replace the first number (e.g. `2`) in the array with `3`.
+
+
+_Client Capability_
+
+The following client capabilities are defined for semantic tokens:
+
+* property name (optional): `textDocument.semanticTokens`
+* property type: `SemanticTokensClientCapabilities` defined as follows:
+
+```typescript
+interface SemanticTokensClientCapabilities {
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to `true`
+	 * the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+	 * return value for the corresponding server capability as well.
+	 */
+	dynamicRegistration?: boolean;
+
+	/**
+	 * Which requests the client supports and might send to the server.
+	 */
+	requests: {
+		/**
+		 * The client will send the `textDocument/semanticTokens/range` request if
+		 * the server provides a corresponding handler.
+		 */
+		range?: boolean | {
+		};
+
+		/**
+		 * The client will send the `textDocument/semanticTokens/full` request if
+		 * the server provides a corresponding handler.
+		 */
+		full?: boolean | {
+			/**
+			 * The client will send the `textDocument/semanticTokens/full/delta` request if
+			 * the server provides a corresponding handler.
+			*/
+			delta?: boolean
+		}
+	}
+
+	/**
+	 * The token types that the client supports.
+	 */
+	tokenTypes: string[];
+
+	/**
+	 * The token modifiers that the client supports.
+	 */
+	tokenModifiers: string[];
+
+	/**
+	 * The formats the clients supports.
+	 */
+	formats: TokenFormat[];
+}
+```
+
+_Server Capability_
+
+The following server capabilities are defined for semantic tokens:
+
+* property name (optional): `semanticTokensProvider`
+* property type: `SemanticTokensOptions | SemanticTokensRegistrationOptions` where `SemanticTokensOptions` is defined as follows:
+
+```typescript
+export interface SemanticTokensOptions extends WorkDoneProgressOptions {
+	/**
+	 * The legend used by the server
+	 */
+	legend: SemanticTokensLegend;
+
+	/**
+	 * Server supports providing semantic tokens for a specific range
+	 * of a document.
+	 */
+	range?: boolean | {
+	};
+
+	/**
+	 * Server supports providing semantic tokens for a full document.
+	 */
+	full?: boolean | {
+		/**
+		 * The server supports deltas for full documents.
+		 */
+		delta?: boolean;
+	}
+}
+```
+
+_Registration Options_: `SemanticTokensRegistrationOptions` defined as follows:
+
+```typescript
+export interface SemanticTokensRegistrationOptions extends TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions {
+}
+```
+
+The following sections describe the concrete requests available for semantic tokens.
+
+**Requesting semantic tokens for a whole file**
+
+_Request_:
+
+* method: `textDocument/semanticTokens/full`
+* params: `SemanticTokensParams` defined as follows:
+
+```typescript
+export interface SemanticTokensParams extends WorkDoneProgressParams, PartialResultParams {
+	/**
+	 * The text document.
+	 */
+	textDocument: TextDocumentIdentifier;
+}
+```
+
+_Response_:
+
+* result: `SemanticTokens | null` where `SemanticTokens` is defined as follows:
+
+```typescript
+export interface SemanticTokens {
+	/**
+	 * An optional result id. If provided and clients support delta updating
+	 * the client will include the result id in the next semantic token request.
+	 * A server can then instead of computing all semantic tokens again simply
+	 * send a delta.
+	 */
+	resultId?: string;
+
+	/**
+	 * The actual tokens.
+	 */
+	data: number[];
+}
+```
+
+* partial result: `SemanticTokensPartialResult` defines as follows:
+
+```typescript
+export interface SemanticTokensPartialResult {
+	data: number[];
+}
+```
+
+* error: code and message set in case an exception happens during the 'textDocument/semanticTokens/full' request
+
+**Requesting semantic token delta for a whole file**
+
+_Request_:
+
+* method: `textDocument/semanticTokens/full/delta`
+* params: `SemanticTokensDeltaParams` defined as follows:
+
+```typescript
+export interface SemanticTokensDeltaParams extends WorkDoneProgressParams, PartialResultParams {
+	/**
+	 * The text document.
+	 */
+	textDocument: TextDocumentIdentifier;
+
+	/**
+	 * The result id of a previous response. The result Id can either point to a full response
+	 * or a delta response depending on what was recevied last.
+	 */
+	previousResultId: string;
+}
+```
+
+_Response_:
+
+* result: `SemanticTokens | SemanticTokensDelta | null` where `SemanticTokensDelta` is defined as follows:
+
+```typescript
+export interface SemanticTokensDelta {
+	readonly resultId?: string;
+	/**
+	 * The semantic token edits to transform a previous result into a new result.
+	 */
+	edits: SemanticTokensEdit[];
+}
+
+export interface SemanticTokensEdit {
+	/**
+	 * The start offset of the edit.
+	 */
+	start: number;
+
+	/**
+	 * The count of elements to remove.
+	 */
+	deleteCount: number;
+
+	/**
+	 * The elements to insert.
+	 */
+	data?: number[];
+}
+```
+
+* partial result: `SemanticTokensDeltaPartialResult` defines as follows:
+
+```typescript
+export interface SemanticTokensDeltaPartialResult {
+	edits: SemanticTokensEdit[]
+}
+```
+
+* error: code and message set in case an exception happens during the 'textDocument/semanticTokens/full/delta' request
+
+**Requesting semantic tokens for a range**
+
+When a user opens a file it can be benificial to only compute the semantic tokens for the visible range (faster rendering of the tokens in the user interface). If a server can compute these tokens faster than for the whole file it can provide a handler for the `textDocument/semanticTokens/range` request to handle this case special. Please note that if a client also announces that it will send the `textDocument/semanticTokens/range` server should implement this request as well to allow for flicker free scrolling and semantic coloring of a minimap.
+
+_Request_:
+
+* method: `textDocument/semanticTokens/range`
+* params: `SemanticTokensRangeParams` defined as follows:
+
+```typescript
+export interface SemanticTokensRangeParams extends WorkDoneProgressParams, PartialResultParams {
+	/**
+	 * The text document.
+	 */
+	textDocument: TextDocumentIdentifier;
+
+	/**
+	 * The range the semantic tokens are requested for.
+	 */
+	range: Range;
+}
+```
+
+_Response_:
+
+* result: `SemanticTokens | null` where `SemanticTokensDelta`
+* partial result: `SemanticTokensPartialResult`
+* error: code and message set in case an exception happens during the 'textDocument/semanticTokens/range' request
+
+
 ### Implementation considerations
 
 Language servers usually run in a separate process and client communicate with them in an asynchronous fashion. Additionally clients usually allow users to interact with the source code even if request results are pending. We recommend the following implementation pattern to avoid that clients apply outdated response results:
@@ -5643,6 +6383,16 @@ Language servers usually run in a separate process and client communicate with t
 - if a client notices that a server exits unexpectedly, it should try to restart the server. However clients should be careful not to restart a crashing server endlessly. VS Code, for example, doesn't restart a server which has crashed 5 times in the last 180 seconds.
 
 ### <a href="#changeLog" name="changeLog" class="anchor">Change Log</a>
+
+#### <a href="#version_3_16_0" name="version_3_16_0" class="anchor">3.16.0 (xx/xx/xxxx)</a>
+
+* Add support for tracing
+* Add semantic token support
+* Add call hierarchy support
+* Add client capbility for resolving text edits on completion items.
+* Add support for insert and replace ranges on `CompletionItem`
+* Add support for diagnostic links
+* Add support for tags on `SymbolInformation` and `DocumentSymbol`
 
 #### <a href="#version_3_15_0" name="version_3_15_0" class="anchor">3.15.0 (01/14/2020)</a>
 
