@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:analysis_server/lsp_protocol/protocol_generated.dart';
 import 'package:analysis_server/lsp_protocol/protocol_special.dart';
 import 'package:analysis_server/src/protocol/protocol_internal.dart';
@@ -107,6 +109,41 @@ class Bar {
 
     expect(pluginManager.analysisUpdateContentParams.files,
         equals({mainFilePath: AddContentOverlay(content)}));
+  }
+
+  Future<void> test_documentOpen_setsPriorityFileIfEarly() async {
+    // When initializing with config support, the server will call back to the client
+    // which can delay analysis roots being configured. This can result in files
+    // being opened before analysis roots are set which has previously caused the
+    // files not to be marked as priority on the created drivers.
+    // https://github.com/Dart-Code/Dart-Code/issues/2438
+    // https://github.com/dart-lang/sdk/issues/42994
+
+    // Initialize the server, but delay providing the configuration until after
+    // we've opened the file.
+    final completer = Completer<void>();
+
+    // Send the initialize request but do not await it.
+    final initResponse = initialize(
+        workspaceCapabilities: withDidChangeConfigurationDynamicRegistration(
+            withConfigurationSupport(emptyWorkspaceClientCapabilities)));
+
+    // When asked for config, delay the response until we have sent the openFile notification.
+    final config = provideConfig(
+      () => initResponse,
+      completer.future.then((_) => {'dart.foo': false}),
+    );
+
+    // Wait for initialisatin to finish, open the file, then allow config to complete.
+    await initResponse;
+    await openFile(mainFileUri, content);
+    completer.complete();
+    await config;
+    await pumpEventQueue(times: 5000);
+
+    // Ensure the opened file is in the priority list.
+    expect(server.getAnalysisDriver(mainFilePath).priorityFiles,
+        equals([mainFilePath]));
   }
 
   Future<void> _initializeAndOpen() async {
