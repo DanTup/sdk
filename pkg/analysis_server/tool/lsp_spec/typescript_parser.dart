@@ -60,6 +60,18 @@ class ArrayType extends TypeBase {
   String get typeArgsString => '<${elementType.dartTypeWithTypeArgs}>';
 }
 
+class LiteralType extends TypeBase {
+  final String literal;
+
+  LiteralType(this.literal);
+
+  @override
+  String get dartType => 'List';
+
+  // @override
+  // String get typeArgsString => '<${elementType.dartTypeWithTypeArgs}>';
+}
+
 class AstNode {
   final Comment commentNode;
   final bool isDeprecated;
@@ -180,9 +192,23 @@ class MapType extends TypeBase {
 
   @override
   String get dartType => 'Map';
+
   @override
   String get typeArgsString =>
       '<${indexType.dartTypeWithTypeArgs}, ${valueType.dartTypeWithTypeArgs}>';
+}
+
+class LiteralType extends TypeBase {
+  final TypeBase type;
+  final Object value;
+
+  LiteralType(this.type, this.value);
+
+  @override
+  String get dartType => type.dartType;
+
+  @override
+  String get typeArgsString => type.typeArgsString;
 }
 
 class Member extends AstNode {
@@ -562,17 +588,13 @@ class Parser {
         // Some types are in (parens), so we just parse the contents as a nested type.
         type = _type(containerName, fieldName);
         _consume(TokenType.RIGHT_PAREN, 'Expected )');
-      } else if (_match([TokenType.STRING])) {
-        // In TS and the spec, literal strings can be types:
+      } else if (_check(TokenType.STRING) || _check(TokenType.NUMBER)) {
+        final token = _advance();
+        // In TS and the spec, literal strings/numbers can be types:
         // export const PlainText: 'plaintext' = 'plaintext';
         // trace?: 'off' | 'messages' | 'verbose';
-        // the best we can do is use their base type (string).
-        type = Type.identifier('string');
-      } else if (_match([TokenType.NUMBER])) {
-        // In TS and the spec, literal numbers can be types:
         // export const Invoked: 1 = 1;
-        // the best we can do is use their base type (number).
-        type = Type.identifier('number');
+        type = Type.literal(token.lexeme);
       } else if (_match([TokenType.LEFT_BRACKET])) {
         // Tuples will just be converted to List/Array.
         final tupleElementTypes = <TypeBase>[];
@@ -845,6 +867,8 @@ class Token {
 
   Token.identifier(String identifier) : this(TokenType.IDENTIFIER, identifier);
 
+  Token.literal(String value) : this(TokenType.LITERAL, value);
+
   @override
   String toString() => '${type.toString().padRight(25)} '
       '${lexeme.padRight(10)}\n';
@@ -872,6 +896,7 @@ enum TokenType {
   LEFT_PAREN,
   LESS_EQUAL,
   LESS,
+  LITERAL,
   NAMESPACE_KEYWORD,
   NUMBER,
   PIPE,

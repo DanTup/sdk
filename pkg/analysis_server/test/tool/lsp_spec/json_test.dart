@@ -142,6 +142,26 @@ void main() {
       expect(canParse, isTrue);
     });
 
+    test('canParse allows matching literal strings', () {
+      // The CreateFile type is defined with `{ kind: 'create' }` so the only
+      // allowed value for `kind` is "create".
+      final canParse = CreateFile.canParse({
+        'kind': 'create',
+        'uri': 'file:///temp/foo',
+      }, nullLspJsonReporter);
+      expect(canParse, isTrue);
+    });
+
+    test('canParse disallows non-matching literal strings', () {
+      // The CreateFile type is defined with `{ kind: 'create' }` so the only
+      // allowed value for `kind` is "create".
+      final canParse = CreateFile.canParse({
+        'kind': 'not-create',
+        'uri': 'file:///temp/foo',
+      }, nullLspJsonReporter);
+      expect(canParse, isFalse);
+    });
+
     test('canParse validates optional fields', () {
       expect(
         RenameFileOptions.canParse(<String, Object>{}, nullLspJsonReporter),

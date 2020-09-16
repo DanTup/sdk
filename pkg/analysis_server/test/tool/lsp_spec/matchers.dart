@@ -17,6 +17,9 @@ Matcher isResponseError(ErrorCodes code) => const TypeMatcher<ResponseError>()
 
 Matcher isSimpleType(String name) => SimpleTypeMatcher(name);
 
+Matcher isLiteralOf(String name, Object value) =>
+    LiteralTypeMatcher(name, value);
+
 class ArrayTypeMatcher extends Matcher {
   final Matcher _elementTypeMatcher;
   const ArrayTypeMatcher(this._elementTypeMatcher);
@@ -85,5 +88,27 @@ class SimpleTypeMatcher extends Matcher {
   @override
   bool matches(item, Map matchState) {
     return item is Type && item.name == _expectedName;
+  }
+}
+
+class LiteralTypeMatcher extends Matcher {
+  final String _typeName;
+  final Object _value;
+  Matcher _typeMatcher;
+  LiteralTypeMatcher(this._typeName, this._value) {
+    _typeMatcher = isSimpleType(_typeName);
+  }
+
+  @override
+  Description describe(Description description) => description
+      .add('a literal where type is ')
+      .addDescriptionOf(_typeMatcher)
+      .add(' and value is $_value');
+
+  @override
+  bool matches(item, Map matchState) {
+    return item is LiteralType &&
+        _typeMatcher.matches(item.type, matchState) &&
+        item.value == _value;
   }
 }

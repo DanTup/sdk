@@ -136,6 +136,9 @@ class LspAnalysisServer extends AbstractAnalysisServer {
           instrumentationService,
           LspNotificationManager(channel, baseResourceProvider.pathContext),
         ) {
+    instrumentationService?.logInfo('DANNYDANNYDANNY');
+    instrumentationService?.logError('ERRORDANNYDANNYDANNY');
+
     notificationManager.server = this;
     messageHandler = UninitializedStateMessageHandler(this);
     capabilitiesComputer = ServerCapabilitiesComputer(this);
@@ -613,6 +616,8 @@ class LspAnalysisServer extends AbstractAnalysisServer {
     final includedPaths = HashSet<String>.of(_explicitAnalysisRoots)
       ..addAll(_temporaryAnalysisRoots.values)
       ..toList();
+
+    instrumentationService.logInfo('Setting analysis roots: $includedPaths');
 
     declarationsTracker?.discardContexts();
     notificationManager.setAnalysisRoots(includedPaths.toList(), []);
