@@ -197,10 +197,9 @@ class B extends A {
 ''');
   }
 
-  /// Failing because when CreateMissingOverrides calls `builder.writeOverride`
-  /// it has no `eol` and uses a default `\n` for some parts of the edit.
-  @failingTest
   Future<void> test_lineEndings() async {
+    // TODO(dantup): Remove the need for this here, and have all of the tests
+    // test with CRLF when running on Windows.
     final newlineWithoutCarriageReturn = RegExp(r'(?<!\r)\n');
     String asCrLf(String input) =>
         input.replaceAll(newlineWithoutCarriageReturn, '\r\n');
@@ -220,7 +219,7 @@ class A {
 class B implements A {
   @override
   void ma() {
-    // TODO: implement mb
+    // TODO: implement ma
   }
 }
 '''));
