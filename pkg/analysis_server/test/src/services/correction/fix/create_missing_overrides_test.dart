@@ -197,6 +197,35 @@ class B extends A {
 ''');
   }
 
+  /// Failing because when CreateMissingOverrides calls `builder.writeOverride`
+  /// it has no `eol` and uses a default `\n` for some parts of the edit.
+  @failingTest
+  Future<void> test_lineEndings() async {
+    final newlineWithoutCarriageReturn = RegExp(r'(?<!\r)\n');
+    String asCrLf(String input) =>
+        input.replaceAll(newlineWithoutCarriageReturn, '\r\n');
+    await resolveTestUnit(asCrLf('''
+class A {
+  void ma() {}
+}
+
+class B implements A {
+}
+'''));
+    await assertHasFix(asCrLf('''
+class A {
+  void ma() {}
+}
+
+class B implements A {
+  @override
+  void ma() {
+    // TODO: implement mb
+  }
+}
+'''));
+  }
+
   Future<void> test_mergeToField_getterSetter() async {
     await resolveTestUnit('''
 class A {
