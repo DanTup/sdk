@@ -13,6 +13,7 @@ import 'package:analyzer/src/dart/error/hint_codes.dart';
 import 'package:analyzer/src/generated/java_engine.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/test_utilities/find_node.dart';
+import 'package:analyzer/src/test_utilities/platform.dart';
 import 'package:test/test.dart';
 
 import 'abstract_context.dart';
@@ -107,6 +108,7 @@ class AbstractSingleUnitTest extends AbstractContextTest {
   }
 
   Future<void> resolveTestUnit(String code) async {
+    code = normalizeNewlinesForPlatform(code);
     addTestSource(code);
     testAnalysisResult = await session.getResolvedUnit(testFile);
     testUnit = testAnalysisResult.unit;

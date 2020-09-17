@@ -4,6 +4,7 @@
 
 import 'package:analysis_server/src/services/refactoring/extract_method.dart';
 import 'package:analysis_server/src/services/refactoring/refactoring.dart';
+import 'package:analyzer/src/test_utilities/platform.dart';
 import 'package:analyzer_plugin/protocol/protocol_common.dart';
 import 'package:test/test.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
@@ -2923,7 +2924,7 @@ Completer<int> newCompleter() => null;
   }
 
   void _createRefactoringForStartEndComments() {
-    var offset = findEnd('// start') + '\n'.length;
+    var offset = findEnd('// start') + platformEol.length;
     var end = findOffset('// end');
     _createRefactoring(offset, end - offset);
   }
