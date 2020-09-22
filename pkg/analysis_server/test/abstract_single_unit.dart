@@ -7,6 +7,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
+import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/src/dart/ast/element_locator.dart';
 import 'package:analyzer/src/dart/ast/utilities.dart';
 import 'package:analyzer/src/dart/error/hint_codes.dart';
@@ -21,6 +22,9 @@ import 'abstract_context.dart';
 class AbstractSingleUnitTest extends AbstractContextTest {
   bool verifyNoTestUnitErrors = true;
 
+  /// Whether to rewrite line endings in test code based on platform.
+  bool useLineEndingsForPlatform = false;
+
   String testCode;
   String testFile;
   Source testSource;
@@ -29,6 +33,14 @@ class AbstractSingleUnitTest extends AbstractContextTest {
   CompilationUnitElement testUnitElement;
   LibraryElement testLibraryElement;
   FindNode findNode;
+
+  @override
+  Source addSource(String path, String content, [Uri uri]) {
+    if (useLineEndingsForPlatform) {
+      content = normalizeNewlinesForPlatform(content);
+    }
+    return super.addSource(path, content, uri);
+  }
 
   void addTestSource(String code, [Uri uri]) {
     testCode = code;
@@ -107,8 +119,18 @@ class AbstractSingleUnitTest extends AbstractContextTest {
     return length;
   }
 
+  @override
+  File newFile(String path, {String content = ''}) {
+    if (useLineEndingsForPlatform) {
+      content = normalizeNewlinesForPlatform(content);
+    }
+    return super.newFile(path, content: content);
+  }
+
   Future<void> resolveTestUnit(String code) async {
-    code = normalizeNewlinesForPlatform(code);
+    if (useLineEndingsForPlatform) {
+      code = normalizeNewlinesForPlatform(code);
+    }
     addTestSource(code);
     testAnalysisResult = await session.getResolvedUnit(testFile);
     testUnit = testAnalysisResult.unit;

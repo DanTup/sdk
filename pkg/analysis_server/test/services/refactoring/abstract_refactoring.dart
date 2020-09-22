@@ -39,7 +39,9 @@ abstract class RefactoringTest extends AbstractSingleUnitTest {
   /// Asserts that [refactoringChange] contains a [FileEdit] for the file
   /// with the given [path], and it results the [expectedCode].
   void assertFileChangeResult(String path, String expectedCode) {
-    expectedCode = normalizeNewlinesForPlatform(expectedCode);
+    if (useLineEndingsForPlatform) {
+      expectedCode = normalizeNewlinesForPlatform(expectedCode);
+    }
     // prepare FileEdit
     var fileEdit = refactoringChange.getFileEdit(convertPath(path));
     expect(fileEdit, isNotNull, reason: 'No file edit for $path');
@@ -114,7 +116,9 @@ abstract class RefactoringTest extends AbstractSingleUnitTest {
   /// Asserts that [refactoringChange] contains a [FileEdit] for [testFile], and
   /// it results the [expectedCode].
   void assertTestChangeResult(String expectedCode) {
-    expectedCode = normalizeNewlinesForPlatform(expectedCode);
+    if (useLineEndingsForPlatform) {
+      expectedCode = normalizeNewlinesForPlatform(expectedCode);
+    }
     // prepare FileEdit
     var fileEdit = refactoringChange.getFileEdit(testFile);
     expect(fileEdit, isNotNull);
@@ -134,6 +138,7 @@ abstract class RefactoringTest extends AbstractSingleUnitTest {
   @override
   void setUp() {
     super.setUp();
+    useLineEndingsForPlatform = true;
     searchEngine = SearchEngineImpl([driver]);
   }
 }

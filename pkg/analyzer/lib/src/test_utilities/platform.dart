@@ -17,13 +17,6 @@ String normalizeNewlinesForPlatform(String input) {
     return input;
   }
 
-  // TODO(dantup): This is commited as a no-op because it breaks many tests
-  // on Windows.
-  //
-  // Uncomment these lines to work on fixing tests. Change `platformEol`
-  // to `\r\n` to emulate Windows behaviour from non-windows machines.
-  //
-  // final newlinePattern = RegExp(r'\r?\n'); // either \r\n or \n
-  // return input.replaceAll(newlinePattern, platformEol);
-  return input;
+  final newlinePattern = RegExp(r'\r?\n'); // either \r\n or \n
+  return input.replaceAll(newlinePattern, platformEol);
 }

@@ -87,7 +87,9 @@ abstract class FixProcessorTest extends AbstractSingleUnitTest {
       String target,
       int expectedNumberOfFixesForKind,
       String matchFixMessage}) async {
-    expected = normalizeNewlinesForPlatform(expected);
+    if (useLineEndingsForPlatform) {
+      expected = normalizeNewlinesForPlatform(expected);
+    }
     var error = await _findErrorToFix(errorFilter, length: length);
     var fix = await _assertHasFix(error,
         expectedNumberOfFixesForKind: expectedNumberOfFixesForKind,
@@ -171,6 +173,7 @@ abstract class FixProcessorTest extends AbstractSingleUnitTest {
   void setUp() {
     super.setUp();
     verifyNoTestUnitErrors = false;
+    useLineEndingsForPlatform = true;
     _createAnalysisOptionsFile();
   }
 

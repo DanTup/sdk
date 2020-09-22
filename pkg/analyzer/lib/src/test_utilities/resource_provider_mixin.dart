@@ -5,7 +5,6 @@
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/memory_file_system.dart';
 import 'package:analyzer/src/dart/analysis/context_locator.dart';
-import 'package:analyzer/src/test_utilities/platform.dart';
 
 /// A mixin for test classes that adds a [ResourceProvider] and utility methods
 /// for manipulating the file system. The utility methods all take a posix style
@@ -52,7 +51,6 @@ mixin ResourceProviderMixin {
   }
 
   File newFile(String path, {String content = ''}) {
-    content = normalizeNewlinesForPlatform(content);
     String convertedPath = convertPath(path);
     return resourceProvider.newFile(convertedPath, content);
   }
