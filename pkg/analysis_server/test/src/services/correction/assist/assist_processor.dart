@@ -152,6 +152,7 @@ abstract class AssistProcessorTest extends AbstractSingleUnitTest {
     if (useLineEndingsForPlatform) {
       code = normalizeNewlinesForPlatform(code);
     }
+    final eol = code.contains('\r\n') ? '\r\n' : '\n';
     var offset = code.indexOf('/*caret*/');
     if (offset >= 0) {
       var endOffset = offset + '/*caret*/'.length;
@@ -159,13 +160,13 @@ abstract class AssistProcessorTest extends AbstractSingleUnitTest {
       _offset = offset;
       _length = 0;
     } else {
-      var startOffset = code.indexOf('// start$platformEol');
-      var endOffset = code.indexOf('// end$platformEol');
+      var startOffset = code.indexOf('// start$eol');
+      var endOffset = code.indexOf('// end$eol');
       if (startOffset >= 0 && endOffset >= 0) {
-        var startLength = '// start$platformEol'.length;
+        var startLength = '// start$eol'.length;
         code = code.substring(0, startOffset) +
             code.substring(startOffset + startLength, endOffset) +
-            code.substring(endOffset + '// end$platformEol'.length);
+            code.substring(endOffset + '// end$eol'.length);
         _offset = startOffset;
         _length = endOffset - startLength - _offset;
       } else {
