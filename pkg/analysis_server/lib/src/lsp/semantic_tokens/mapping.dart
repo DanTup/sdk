@@ -115,7 +115,7 @@ final highlightRegionTokenTypes = {
   HighlightRegionType.LOCAL_VARIABLE_REFERENCE: SemanticTokenTypes.variable,
   HighlightRegionType.PARAMETER_DECLARATION: SemanticTokenTypes.parameter,
   HighlightRegionType.PARAMETER_REFERENCE: SemanticTokenTypes.parameter,
-  HighlightRegionType.STATIC_FIELD_DECLARATION: SemanticTokenTypes.property,
+  HighlightRegionType.STATIC_FIELD_DECLARATION: SemanticTokenTypes.variable,
   HighlightRegionType.STATIC_GETTER_DECLARATION: SemanticTokenTypes.property,
   HighlightRegionType.STATIC_GETTER_REFERENCE: SemanticTokenTypes.property,
   HighlightRegionType.STATIC_METHOD_DECLARATION: SemanticTokenTypes.method,
@@ -125,10 +125,10 @@ final highlightRegionTokenTypes = {
   HighlightRegionType.TOP_LEVEL_FUNCTION_DECLARATION:
       SemanticTokenTypes.function,
   HighlightRegionType.TOP_LEVEL_FUNCTION_REFERENCE: SemanticTokenTypes.function,
-  HighlightRegionType.TOP_LEVEL_GETTER_DECLARATION: SemanticTokenTypes.variable,
-  HighlightRegionType.TOP_LEVEL_GETTER_REFERENCE: SemanticTokenTypes.variable,
-  HighlightRegionType.TOP_LEVEL_SETTER_DECLARATION: SemanticTokenTypes.variable,
-  HighlightRegionType.TOP_LEVEL_SETTER_REFERENCE: SemanticTokenTypes.variable,
+  HighlightRegionType.TOP_LEVEL_GETTER_DECLARATION: SemanticTokenTypes.property,
+  HighlightRegionType.TOP_LEVEL_GETTER_REFERENCE: SemanticTokenTypes.property,
+  HighlightRegionType.TOP_LEVEL_SETTER_DECLARATION: SemanticTokenTypes.property,
+  HighlightRegionType.TOP_LEVEL_SETTER_REFERENCE: SemanticTokenTypes.property,
   HighlightRegionType.TOP_LEVEL_VARIABLE: SemanticTokenTypes.variable,
   HighlightRegionType.TOP_LEVEL_VARIABLE_DECLARATION:
       SemanticTokenTypes.variable,

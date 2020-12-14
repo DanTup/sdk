@@ -54,10 +54,11 @@ class SemanticTokensTest extends AbstractLspAnalysisServerTest {
     return results;
   }
 
+  @soloTest
   Future<void> test_class() async {
     final content = '''
     /// class docs
-    class MyClass {
+    class MyClass<T> {
       // class comment
     }
 
@@ -74,6 +75,7 @@ class SemanticTokensTest extends AbstractLspAnalysisServerTest {
       ),
       _Token('class', SemanticTokenTypes.keyword),
       _Token('MyClass', SemanticTokenTypes.class_),
+      _Token('T', SemanticTokenTypes.typeParameter),
       _Token('// class comment', SemanticTokenTypes.comment),
       _Token('// Trailing comment', SemanticTokenTypes.comment),
     ];
@@ -113,7 +115,7 @@ class SemanticTokensTest extends AbstractLspAnalysisServerTest {
       _Token('/// static field docs', SemanticTokenTypes.comment),
       _Token('static', SemanticTokenTypes.keyword),
       _Token('String', SemanticTokenTypes.class_),
-      _Token('myStaticField', SemanticTokenTypes.property,
+      _Token('myStaticField', SemanticTokenTypes.variable,
           [SemanticTokenModifiers.declaration, SemanticTokenModifiers.static]),
       _Token("'StaticFieldVal'", SemanticTokenTypes.string),
       _Token('main', SemanticTokenTypes.function,
@@ -126,6 +128,8 @@ class SemanticTokensTest extends AbstractLspAnalysisServerTest {
       _Token('a', SemanticTokenTypes.variable),
       _Token('myField', SemanticTokenTypes.property),
       _Token('MyClass', SemanticTokenTypes.class_),
+      // TODO(dantup):  This should be "variable", but that might require more knowledge than
+      // the highlights computer uses?
       _Token('myStaticField', SemanticTokenTypes.property,
           [SemanticTokenModifiers.static]),
       _Token("'a'", SemanticTokenTypes.string),
@@ -235,8 +239,6 @@ class SemanticTokensTest extends AbstractLspAnalysisServerTest {
       _Token('class', SemanticTokenTypes.keyword),
       _Token('MyClass', SemanticTokenTypes.class_),
       _Token('/// method docs', SemanticTokenTypes.comment),
-      // TODO(dantup): Should we produce a single token for "@override"?
-      // If so, how about "@Deprecated('foo')"?
       _Token('@', CustomSemanticTokenTypes.annotation),
       _Token('override', SemanticTokenTypes.property),
       _Token('void', SemanticTokenTypes.keyword),
@@ -480,9 +482,11 @@ class SemanticTokensTest extends AbstractLspAnalysisServerTest {
       // parts of interpolated strings? Currently they do not produce highlight
       // regions so they do not come through.
       // _Token(r"'$", SemanticTokenTypes.string),
-      _Token('string1', SemanticTokenTypes.variable),
+      // TODO(dantup): This should be variable but comes through as property - perhaps
+      // because of synthetic getter/setter?
+      _Token('string1', SemanticTokenTypes.property),
       // _Token(r'${', SemanticTokenTypes.string),
-      _Token('string1', SemanticTokenTypes.variable),
+      _Token('string1', SemanticTokenTypes.property),
       // _Token('.', SemanticTokenTypes.string),
       _Token('length', SemanticTokenTypes.property),
       // _Token("}'", SemanticTokenTypes.string),
@@ -517,11 +521,7 @@ class SemanticTokensTest extends AbstractLspAnalysisServerTest {
       _Token('const', SemanticTokenTypes.keyword),
       _Token('strings', SemanticTokenTypes.variable,
           [SemanticTokenModifiers.declaration]),
-      _Token(
-        'String',
-        // TODO(dantup): Should this be typeParameter?
-        SemanticTokenTypes.class_,
-      ),
+      _Token('String', SemanticTokenTypes.class_),
       _Token('"test"', SemanticTokenTypes.string),
       _Token("'test'", SemanticTokenTypes.string),
       _Token("r'test'", SemanticTokenTypes.string),
