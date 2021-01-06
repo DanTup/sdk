@@ -24,7 +24,12 @@ class CreateConstructor extends CorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    if (node is ArgumentList && node.parent is InstanceCreationExpression) {
+    // node could be either an ArgumentList or one of the arguments
+    final argumentList = node is! ArgumentList && node.parent is ArgumentList
+        ? node.parent
+        : node;
+    if (argumentList is ArgumentList &&
+        argumentList.parent is InstanceCreationExpression) {
       await _proposeFromInstanceCreation(builder);
     } else {
       await _proposeFromConstructorName(builder);
@@ -91,7 +96,11 @@ class CreateConstructor extends CorrectionProducer {
   }
 
   Future<void> _proposeFromInstanceCreation(ChangeBuilder builder) async {
-    InstanceCreationExpression instanceCreation = node.parent;
+    // node could be either an ArgumentList or one of the arguments
+    final argumentList = node is! ArgumentList && node.parent is ArgumentList
+        ? node.parent
+        : node;
+    InstanceCreationExpression instanceCreation = argumentList.parent;
     _constructorName = instanceCreation.constructorName;
     // should be synthetic default constructor
     var constructorElement = _constructorName.staticElement;
