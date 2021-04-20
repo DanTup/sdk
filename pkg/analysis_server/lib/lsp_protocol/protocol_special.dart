@@ -266,7 +266,7 @@ abstract class IncomingMessage {
 /// A helper to allow handlers to declare both a JSON validation function and
 /// parse function.
 class LspJsonHandler<T> {
-  final bool Function(Map<String, Object?>, LspJsonReporter reporter)
+  final bool Function(Map<String, Object?>?, LspJsonReporter reporter)
       validateParams;
   final T Function(Map<String, Object?>) convertParams;
 

@@ -282,12 +282,12 @@ class RenameTest extends AbstractLspAnalysisServerTest {
     await openFile(referencedFileUri, withoutMarkers(referencedContent),
         version: referencedVersion);
 
-    final result = await rename(
+    final result = (await rename(
       mainFileUri,
       mainVersion,
       positionFromMarker(mainContent),
       'MyNewClass',
-    );
+    ))!;
 
     // Ensure applying the changes will give us the expected content.
     final contents = {
@@ -394,12 +394,12 @@ class RenameTest extends AbstractLspAnalysisServerTest {
     await initialize();
     await openFile(mainFileUri, withoutMarkers(content), version: 222);
 
-    final result = await rename(
+    final result = (await rename(
       mainFileUri,
       222,
       positionFromMarker(content),
       'MyNewClass',
-    );
+    ))!;
 
     // Ensure applying the changes will give us the expected content.
     final contents = {
@@ -453,7 +453,7 @@ class RenameTest extends AbstractLspAnalysisServerTest {
     if (expectedPlaceholder == null) {
       expect(result, isNull);
     } else {
-      expect(result.range, equals(rangeFromMarkers(content)));
+      expect(result!.range, equals(rangeFromMarkers(content)));
       expect(result.placeholder, equals(expectedPlaceholder));
     }
   }
@@ -566,7 +566,7 @@ class RenameTest extends AbstractLspAnalysisServerTest {
       };
       applyDocumentChanges(
         contents,
-        result.documentChanges!,
+        result!.documentChanges!,
         expectedVersions: documentVersions,
       );
       expect(contents[mainFilePath], equals(expectedContent));

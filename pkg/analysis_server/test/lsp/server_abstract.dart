@@ -908,7 +908,7 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
   Future<T> expectSuccessfulResponseTo<T, R>(
       RequestMessage request, T Function(R) fromJson);
 
-  Future<List<TextEdit>> formatDocument(String fileUri) {
+  Future<List<TextEdit>?> formatDocument(String fileUri) {
     final request = makeRequest(
       Method.textDocument_formatting,
       DocumentFormattingParams(
@@ -922,7 +922,7 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
         request, _fromJsonList(TextEdit.fromJson));
   }
 
-  Future<List<TextEdit>> formatOnType(
+  Future<List<TextEdit>?> formatOnType(
       String fileUri, Position pos, String character) {
     final request = makeRequest(
       Method.textDocument_onTypeFormatting,
@@ -939,7 +939,7 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
         request, _fromJsonList(TextEdit.fromJson));
   }
 
-  Future<List<TextEdit>> formatRange(String fileUri, Range range) {
+  Future<List<TextEdit>?> formatRange(String fileUri, Range range) {
     final request = makeRequest(
       Method.textDocument_rangeFormatting,
       DocumentRangeFormattingParams(
@@ -1035,7 +1035,8 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
     return expectSuccessfulResponseTo(request, DartDiagnosticServer.fromJson);
   }
 
-  Future<List<DocumentHighlight>> getDocumentHighlights(Uri uri, Position pos) {
+  Future<List<DocumentHighlight>?> getDocumentHighlights(
+      Uri uri, Position pos) {
     final request = makeRequest(
       Method.textDocument_documentHighlight,
       TextDocumentPositionParams(
@@ -1154,7 +1155,7 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
     return expectSuccessfulResponseTo(request, SemanticTokens.fromJson);
   }
 
-  Future<SignatureHelp> getSignatureHelp(Uri uri, Position pos,
+  Future<SignatureHelp?> getSignatureHelp(Uri uri, Position pos,
       [SignatureHelpContext? context]) {
     final request = makeRequest(
       Method.textDocument_signatureHelp,
@@ -1422,7 +1423,7 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
     return toPosition(lineInfo.getLocation(offset) as CharacterLocation);
   }
 
-  Future<RangeAndPlaceholder> prepareRename(Uri uri, Position pos) {
+  Future<RangeAndPlaceholder?> prepareRename(Uri uri, Position pos) {
     final request = makeRequest(
       Method.textDocument_prepareRename,
       TextDocumentPositionParams(
@@ -1509,7 +1510,7 @@ mixin LspAnalysisServerTestMixin implements ClientCapabilitiesHelperMixin {
     return rangesFromMarkersImpl(content).toList();
   }
 
-  Future<WorkspaceEdit> rename(
+  Future<WorkspaceEdit?> rename(
     Uri uri,
     int? version,
     Position pos,

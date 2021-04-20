@@ -24,8 +24,8 @@ mixin SignatureHelpMixin on AbstractLspAnalysisServerTest {
     MarkupKind? expectedFormat = MarkupKind.Markdown,
     SignatureHelpContext? context,
   }) async {
-    final res = await getSignatureHelp(
-        mainFileUri, positionFromMarker(fileContent), context);
+    final res = (await getSignatureHelp(
+        mainFileUri, positionFromMarker(fileContent), context))!;
 
     // TODO(dantup): Update this when there is clarification on how to handle
     // no valid selected parameter.
