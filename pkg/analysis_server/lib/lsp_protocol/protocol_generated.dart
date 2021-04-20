@@ -22836,12 +22836,12 @@ class SemanticTokens implements ToJsonable {
   SemanticTokens({this.resultId, required this.data});
   static SemanticTokens fromJson(Map<String, dynamic> json) {
     final resultId = json['resultId'];
-    final data = json['data']?.map((item) => item)?.cast<num>()?.toList();
+    final data = json['data']?.map((item) => item)?.cast<int>()?.toList();
     return SemanticTokens(resultId: resultId, data: data);
   }
 
   /// The actual tokens.
-  final List<num> data;
+  final List<int> data;
 
   /// An optional result id. If provided and clients support delta updating the
   /// client will include the result id in the next semantic token request. A
@@ -22880,8 +22880,8 @@ class SemanticTokens implements ToJsonable {
           return false;
         }
         if (!((obj['data'] is List &&
-            (obj['data'].every((item) => item is num))))) {
-          reporter.reportError('must be of type List<num>');
+            (obj['data'].every((item) => item is int))))) {
+          reporter.reportError('must be of type List<int>');
           return false;
         }
       } finally {
@@ -22898,7 +22898,7 @@ class SemanticTokens implements ToJsonable {
   bool operator ==(Object other) {
     if (other is SemanticTokens && other.runtimeType == SemanticTokens) {
       return resultId == other.resultId &&
-          listEqual(data, other.data, (num a, num b) => a == b) &&
+          listEqual(data, other.data, (int a, int b) => a == b) &&
           true;
     }
     return false;
