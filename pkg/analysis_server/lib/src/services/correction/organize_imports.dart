@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:math' as math;
+
 import 'package:analysis_server/src/utilities/strings.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -334,22 +336,27 @@ class _DirectiveInfo implements Comparable<_DirectiveInfo> {
   String toString() => '(priority=$priority; text=$text)';
 
   static int _compareUri(String a, String b) {
-    var aList = _splitUri(a);
-    var bList = _splitUri(b);
-    int result;
-    if ((result = aList[0].compareTo(bList[0])) != 0) return result;
-    if ((result = aList[1].compareTo(bList[1])) != 0) return result;
-    return 0;
-  }
+    /// Compre URIs by segments, so that the sorting is the same as it would be
+    /// in a folder view where you see only one segment at a time.
+    var aList = a.split('/');
+    var bList = b.split('/');
 
-  /// Split the given [uri] like `package:some.name/and/path.dart` into a list
-  /// like `[package:some.name, and/path.dart]`.
-  static List<String> _splitUri(String uri) {
-    var index = uri.indexOf('/');
-    if (index == -1) {
-      return <String>[uri, ''];
+    // If URIs start with "./" and "../" their order is reversed so that the
+    // current folder comes after the parent folder.
+    if (aList[0] == '.' && bList[0] == '..') {
+      return 1;
+    } else if (aList[0] == '..' && bList[0] == '.') {
+      return -1;
     }
-    return <String>[uri.substring(0, index), uri.substring(index + 1)];
+
+    var numSegments = math.min(aList.length, bList.length);
+    for (var segment = 0; segment < numSegments; segment++) {
+      var result = aList[segment].compareTo(bList[segment]);
+      if (result != 0) {
+        return result;
+      }
+    }
+    return 0;
   }
 }
 

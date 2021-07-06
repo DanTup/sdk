@@ -492,12 +492,14 @@ import 'package:a/b.dart';
 import 'package:b/a.dart'; // We are keeping this because ...''');
   }
 
-  Future<void> test_sort_imports_packageAndPath() async {
+  Future<void> test_sort_imports_packageAndPathSegments() async {
     await _computeUnitAndErrors(r'''
 library lib;
 
 import 'package:product.ui.api.bbb/manager1.dart';
 import 'package:product.ui.api/entity2.dart';
+import 'package:product.ui.api/aaa.bbb/entity.dart';
+import 'package:product.ui.api/aaa/entity.dart';
 import 'package:product.ui/entity.dart';
 import 'package:product.ui.api.aaa/manager2.dart';
 import 'package:product.ui.api/entity1.dart';
@@ -508,11 +510,31 @@ import 'package:product2.client/entity.dart';
 library lib;
 
 import 'package:product.ui/entity.dart';
+import 'package:product.ui.api/aaa/entity.dart';
+import 'package:product.ui.api/aaa.bbb/entity.dart';
 import 'package:product.ui.api/entity1.dart';
 import 'package:product.ui.api/entity2.dart';
 import 'package:product.ui.api.aaa/manager2.dart';
 import 'package:product.ui.api.bbb/manager1.dart';
 import 'package:product2.client/entity.dart';
+''');
+  }
+
+  Future<void> test_sort_imports_dotAndDotDotFolders() async {
+    await _computeUnitAndErrors(r'''
+library lib;
+
+import '../foo.dart';
+import 'foo.dart';
+import './foo.dart';
+''');
+    // validate change
+    _assertOrganize(r'''
+library lib;
+
+import '../foo.dart';
+import './foo.dart';
+import 'foo.dart';
 ''');
   }
 
