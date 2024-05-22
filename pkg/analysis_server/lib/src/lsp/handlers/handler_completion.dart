@@ -363,6 +363,8 @@ class CompletionHandler
   ) async {
     var useNotImportedCompletions =
         suggestFromUnimportedLibraries && capabilities.applyEdit;
+    var preferredDocumentation =
+        server.lspClientConfiguration.global.preferredDocumentation;
 
     var completionRequest = DartCompletionRequest.forResolvedUnit(
       resolvedUnit: unit,
@@ -462,19 +464,29 @@ class CompletionHandler
         var insertionRange =
             toRange(unit.lineInfo, itemReplacementOffset, itemInsertLength);
 
-        // For items that need imports, we'll round-trip some additional info
-        // to allow their additional edits (and documentation) to be handled
-        // lazily to reduce the payload.
+        // To reduce payload sizes for large documentation comments and to avoid
+        // computing edits to add imports up-front, we attach some additional
+        // resolution information that can be used by `completionItem/resolve`
+        // to attach this info later.
         CompletionItemResolutionInfo? resolutionInfo;
         if (item is DartCompletionSuggestion) {
           var elementLocation = item.elementLocation;
           var importUris = item.requiredImports;
 
+          // Completions that need to compute import edits always use resolve.
           if (importUris.isNotEmpty) {
             resolutionInfo = DartCompletionResolutionInfo(
               file: unit.path,
               importUris: importUris.map((uri) => uri.toString()).toList(),
               ref: elementLocation?.encoding,
+            );
+          }
+          // Otherwise, only if there are docs and we don't ahve docs disabled.
+          else if (preferredDocumentation != DocumentationPreference.none &&
+              (item.docSummary?.isNotEmpty ?? false) &&
+              elementLocation != null) {
+            resolutionInfo = DartCompletionResolutionInfo(
+              ref: elementLocation.encoding,
             );
           }
         }
@@ -500,7 +512,7 @@ class CompletionHandler
           // `completionItem/resolve`, otherwise use users preference.
           includeDocumentation: resolutionInfo != null
               ? DocumentationPreference.none
-              : server.lspClientConfiguration.global.preferredDocumentation,
+              : preferredDocumentation,
         );
       }
 

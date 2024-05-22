@@ -61,7 +61,7 @@ class CompletionResolveHandler
     }
 
     var file = data.file;
-    var importUris = data.importUris.map(Uri.parse).toList();
+    var importUris = data.importUris?.map(Uri.parse).toList();
     var elementLocationReference = data.ref;
     var elementLocation = elementLocationReference != null
         ? ElementLocationImpl.con2(elementLocationReference)
@@ -72,6 +72,7 @@ class CompletionResolveHandler
     _latestCompletionItem = item;
     while (item == _latestCompletionItem && timer.elapsed < timeout) {
       try {
+        we'd need to include file to get the session here to get the documentation
         var session = await server.getAnalysisSession(file);
 
         // We shouldn't not get a driver/session, but if we did perhaps the file
@@ -121,24 +122,6 @@ class CompletionResolveHandler
               ]);
         }
 
-        // Look up documentation if we can get an element for this item.
-        Either2<MarkupContent, String>? documentation;
-        var element = elementLocation != null
-            ? await session.locateElement(elementLocation)
-            : null;
-        if (element != null) {
-          var formats = clientCapabilities.completionDocumentationFormats;
-          var dartDocInfo = server.getDartdocDirectiveInfoForSession(session);
-          var dartDoc = DartUnitHoverComputer.computePreferredDocumentation(
-              dartDocInfo,
-              element,
-              server.lspClientConfiguration.global.preferredDocumentation);
-          // `dartDoc` can be both null or empty.
-          documentation = dartDoc != null && dartDoc.isNotEmpty
-              ? asMarkupContentOrString(formats, dartDoc)
-              : null;
-        }
-
         String? detail = item.detail;
         if (changes.edits.isNotEmpty && importUris.isNotEmpty) {
           if (importUris.length == 1) {
@@ -156,6 +139,24 @@ class CompletionResolveHandler
           } else {
             detail = "Auto import required URIs\n\n${item.detail ?? ''}".trim();
           }
+        }
+
+        // Look up documentation if we can get an element for this item.
+        Either2<MarkupContent, String>? documentation;
+        var element = elementLocation != null
+            ? await session.locateElement(elementLocation)
+            : null;
+        if (element != null) {
+          var formats = clientCapabilities.completionDocumentationFormats;
+          var dartDocInfo = server.getDartdocDirectiveInfoForSession(session);
+          var dartDoc = DartUnitHoverComputer.computePreferredDocumentation(
+              dartDocInfo,
+              element,
+              server.lspClientConfiguration.global.preferredDocumentation);
+          // `dartDoc` can be both null or empty.
+          documentation = dartDoc != null && dartDoc.isNotEmpty
+              ? asMarkupContentOrString(formats, dartDoc)
+              : null;
         }
 
         return success(CompletionItem(

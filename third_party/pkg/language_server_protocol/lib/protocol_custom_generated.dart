@@ -841,12 +841,12 @@ class CompletionItemResolutionInfo implements ToJsonable {
   }
 
   static CompletionItemResolutionInfo fromJson(Map<String, Object?> json) {
-    if (DartCompletionResolutionInfo.canParse(json, nullLspJsonReporter)) {
-      return DartCompletionResolutionInfo.fromJson(json);
-    }
     if (PubPackageCompletionItemResolutionInfo.canParse(
         json, nullLspJsonReporter)) {
       return PubPackageCompletionItemResolutionInfo.fromJson(json);
+    }
+    if (DartCompletionResolutionInfo.canParse(json, nullLspJsonReporter)) {
+      return DartCompletionResolutionInfo.fromJson(json);
     }
     return CompletionItemResolutionInfo();
   }
@@ -861,19 +861,19 @@ class DartCompletionResolutionInfo
 
   /// The file where the completion is being inserted.
   ///
-  /// This is used to compute where to add the import.
-  final String file;
+  /// This is used to compute where to add imports when importUris is provided.
+  final String? file;
 
   /// The URIs to be imported if this completion is selected.
-  final List<String> importUris;
+  final List<String>? importUris;
 
   /// The ElementLocation of the item being completed.
   ///
   /// This is used to provide documentation in the resolved response.
   final String? ref;
   DartCompletionResolutionInfo({
-    required this.file,
-    required this.importUris,
+    this.file,
+    this.importUris,
     this.ref,
   });
   @override
@@ -895,8 +895,12 @@ class DartCompletionResolutionInfo
   @override
   Map<String, Object?> toJson() {
     var result = <String, Object?>{};
-    result['file'] = file;
-    result['importUris'] = importUris;
+    if (file != null) {
+      result['file'] = file;
+    }
+    if (importUris != null) {
+      result['importUris'] = importUris;
+    }
     if (ref != null) {
       result['ref'] = ref;
     }
@@ -909,11 +913,11 @@ class DartCompletionResolutionInfo
   static bool canParse(Object? obj, LspJsonReporter reporter) {
     if (obj is Map<String, Object?>) {
       if (!_canParseString(obj, reporter, 'file',
-          allowsUndefined: false, allowsNull: false)) {
+          allowsUndefined: true, allowsNull: false)) {
         return false;
       }
       if (!_canParseListString(obj, reporter, 'importUris',
-          allowsUndefined: false, allowsNull: false)) {
+          allowsUndefined: true, allowsNull: false)) {
         return false;
       }
       return _canParseString(obj, reporter, 'ref',
@@ -926,10 +930,10 @@ class DartCompletionResolutionInfo
 
   static DartCompletionResolutionInfo fromJson(Map<String, Object?> json) {
     final fileJson = json['file'];
-    final file = fileJson as String;
+    final file = fileJson as String?;
     final importUrisJson = json['importUris'];
-    final importUris = (importUrisJson as List<Object?>)
-        .map((item) => item as String)
+    final importUris = (importUrisJson as List<Object?>?)
+        ?.map((item) => item as String)
         .toList();
     final refJson = json['ref'];
     final ref = refJson as String?;

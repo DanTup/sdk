@@ -334,13 +334,16 @@ List<LspEntity> getCustomClasses() {
         field(
           'file',
           type: 'string',
+          canBeUndefined: true,
           comment: 'The file where the completion is being inserted.\n\n'
-              'This is used to compute where to add the import.',
+              'This is used to compute where to add imports when importUris is '
+              'provided.',
         ),
         field(
           'importUris',
           type: 'string',
           array: true,
+          canBeUndefined: true,
           comment: 'The URIs to be imported if this completion is selected.',
         ),
         field(
