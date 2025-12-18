@@ -14,6 +14,7 @@ import 'package:analysis_server/src/legacy_analysis_server.dart';
 import 'package:analysis_server/src/lsp/channel/lsp_channel.dart';
 import 'package:analysis_server/src/lsp/client_capabilities.dart';
 import 'package:analysis_server/src/lsp/client_configuration.dart';
+import 'package:analysis_server/src/lsp/client_state_invalidator.dart';
 import 'package:analysis_server/src/lsp/constants.dart';
 import 'package:analysis_server/src/lsp/handlers/handler_states.dart';
 import 'package:analysis_server/src/lsp/handlers/handlers.dart';
@@ -89,6 +90,8 @@ class LspAnalysisServer extends AnalysisServer {
   /// the server capabilities depend on the client capabilities.
   ServerCapabilities? capabilities;
   late ServerCapabilitiesComputer capabilitiesComputer;
+
+  late final ClientStateInvalidator clientStateInvalidator;
 
   /// Whether or not the server is controlling the shutdown and will exit
   /// automatically.
@@ -167,6 +170,7 @@ class LspAnalysisServer extends AnalysisServer {
     notificationManager.server = this;
     messageHandler = UninitializedStateMessageHandler(this);
     capabilitiesComputer = ServerCapabilitiesComputer(this);
+    clientStateInvalidator = ClientStateInvalidator(this);
 
     var contextManagerCallbacks = LspServerContextManagerCallbacks(
       this,
@@ -383,6 +387,7 @@ class LspAnalysisServer extends AnalysisServer {
   FutureOr<void> handleAnalysisStatusChange(
     analysis.AnalysisStatus status,
   ) async {
+    clientStateInvalidator.onAnalysisStatusChange(status);
     super.handleAnalysisStatusChange(status);
     await sendStatusNotification(status);
   }
@@ -607,6 +612,7 @@ class LspAnalysisServer extends AnalysisServer {
   }
 
   void onOverlayCreated(String path, String content) {
+    clientStateInvalidator.didOpen(path);
     resourceProvider.setOverlay(
       path,
       content: content,
@@ -647,6 +653,7 @@ class LspAnalysisServer extends AnalysisServer {
   }
 
   void onOverlayDestroyed(String path) {
+    clientStateInvalidator.didClose(path);
     resourceProvider.removeOverlay(path);
 
     _afterOverlayChanged(path, plugin.RemoveContentOverlay());
@@ -660,6 +667,7 @@ class LspAnalysisServer extends AnalysisServer {
     required String newContent,
   }) {
     assert(resourceProvider.hasOverlay(path));
+    clientStateInvalidator.didChange(path);
 
     resourceProvider.setOverlay(
       path,
@@ -800,7 +808,7 @@ class LspAnalysisServer extends AnalysisServer {
   }
 
   @override
-  Future<ResponseMessage> sendLspRequest(Method method, Object params) {
+  Future<ResponseMessage> sendLspRequest(Method method, Object? params) {
     var requestId = nextRequestId++;
     var completer = Completer<ResponseMessage>();
     completers[requestId] = completer;
@@ -1279,6 +1287,7 @@ class LspServerContextManagerCallbacks
   @override
   void handleResolvedUnitResult(ResolvedUnitResult result) {
     var path = result.path;
+    analysisServer.clientStateInvalidator.didResolve(path);
 
     var unit = result.unit;
     if (analysisServer.shouldSendClosingLabelsFor(path)) {
