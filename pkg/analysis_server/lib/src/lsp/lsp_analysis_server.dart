@@ -196,6 +196,10 @@ class LspAnalysisServer extends AnalysisServer {
 
     notificationManager.pluginAnalysisStatusChanges.listen((isAnalyzing) {
       if (!pluginManager.initializedCompleter.isCompleted) {
+        instrumentationService.logInfo(
+          'lspServer: pluginAnalysisStatusChanges: completing pluginManager initialization',
+        );
+
         // Without `this.`, some portion of the analyzer believes we are
         // accessing the super parameter, instead of the field in the super
         // class.  See https://github.com/dart-lang/sdk/issues/59996.
@@ -1236,6 +1240,9 @@ class LspAnalysisServer extends AnalysisServer {
     // to do it.
     if (includedPaths.isEmpty &&
         !pluginManager.initializedCompleter.isCompleted) {
+      instrumentationService.logInfo(
+        'lspServer: refreshAnalysisRoots: completing pluginManager initialization due to no includedPaths',
+      );
       pluginManager.initializedCompleter.complete();
     }
   }

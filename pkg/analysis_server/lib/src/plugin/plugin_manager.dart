@@ -154,7 +154,11 @@ class PluginManager {
     this.instrumentationService,
     this.sessionLogger, {
     this._processRunner = const ProcessRunner(),
-  });
+  }) {
+    instrumentationService.logInfo(
+      'analysis/complete: pluginManager created, not initialized',
+    );
+  }
 
   /// All of the legacy plugins that are currently known.
   List<PluginIsolate> get legacyPluginIsolates =>

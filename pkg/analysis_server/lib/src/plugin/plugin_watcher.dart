@@ -45,6 +45,9 @@ class PluginWatcher implements DriverWatcher {
     if (!_pluginsAreEnabled) {
       // Call the plugin manager "initialized."
       if (!manager.initializedCompleter.isCompleted) {
+        manager.instrumentationService.logInfo(
+          'pluginWatcher: addedDriver: completing pluginManager initialization because plugins not enabled',
+        );
         manager.initializedCompleter.complete();
       }
       return;
@@ -68,6 +71,9 @@ class PluginWatcher implements DriverWatcher {
 
       // Call the plugin manager "initialized."
       if (!manager.initializedCompleter.isCompleted) {
+        manager.instrumentationService.logInfo(
+          'pluginWatcher: addedDriver: completing pluginManager initialization (plugins enabled, but none)',
+        );
         manager.initializedCompleter.complete();
       }
       return;
@@ -128,6 +134,8 @@ class PluginWatcher implements DriverWatcher {
   /// minimize the number of isolates), generates the synthetic packages, and
   /// adds them to the context root.
   void _addPlugins(AnalysisDriver driver) {
+    manager.instrumentationService.logInfo('pluginWatcher: _addPlugins');
+
     var contextRoot = driver.analysisContext!.contextRoot;
     var uniqueOptions = driver.analysisOptionsMap.options.toSet();
 

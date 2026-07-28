@@ -59,6 +59,12 @@ void f() {
     expect(relatedInfo.location.range, equals(code.range.range));
   }
 
+  Future<void> test_debug_plugins() =>
+      printInstrumentationLogOnFailure(test_plugins);
+
+  Future<void> test_debug_plugins2() =>
+      printInstrumentationLogOnFailure(test_plugins2);
+
   Future<void> test_initialAnalysis() async {
     newFile(mainFilePath, 'String a = 1;');
 
