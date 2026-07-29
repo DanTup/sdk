@@ -62,6 +62,7 @@ import 'snippets_test.dart' as snippets;
 import 'source_edits_test.dart' as source_edits;
 import 'summary_test.dart' as summary;
 import 'super_test.dart' as get_super;
+import 'temporary_integration_test.dart' as temporary_integration;
 import 'temporary_overlay_operation_test.dart' as temporary_overlay_operation;
 import 'type_definition_test.dart' as type_definition;
 import 'type_hierarchy_test.dart' as type_hierarchy;
@@ -131,6 +132,7 @@ void main() {
     signature_help.main();
     snippets.main();
     source_edits.main();
+    temporary_integration.main();
     temporary_overlay_operation.main();
     type_definition.main();
     type_hierarchy.main();
