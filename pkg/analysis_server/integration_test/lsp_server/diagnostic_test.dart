@@ -28,6 +28,10 @@ class DiagnosticTest extends AbstractLspAnalysisServerIntegrationTest
     failTestOnErrorDiagnostic = false;
   }
 
+  Future<void> test_alwaysFail() {
+    throw 'This test always fails.';
+  }
+
   Future<void> test_contextMessage() async {
     var code = TestCode.parse('''
 void f() {
