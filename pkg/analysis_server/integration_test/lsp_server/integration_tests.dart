@@ -150,6 +150,9 @@ abstract class AbstractLspAnalysisServerIntegrationTest
       }
       rethrow;
     }
+    // Temporarily always print the instrumentation log.
+    print('Test passed. Instrumentation log:');
+    print(instrumentationLogFilePath.readAsStringSync());
   }
 
   @override

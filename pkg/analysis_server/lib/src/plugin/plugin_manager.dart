@@ -220,23 +220,28 @@ class PluginManager {
       isLegacy: isLegacyPlugin,
     );
     try {
-      instrumentationService.logInfo('Starting plugin "$pluginIsolate"');
+      instrumentationService.logInfo('Starting plugin "$path"');
       var session = await pluginIsolate.start(_byteStorePath, _sdkPath);
       unawaited(
         session?.onDone.then((_) {
           if (_pluginMap[path] == pluginIsolate) {
+            instrumentationService.logInfo('Session done "$path"');
             _pluginMap.remove(path);
             _notifyPluginsChanged();
           }
         }),
       );
     } catch (exception, stackTrace) {
+      instrumentationService.logException(
+        'Failed to start plugin "$path": $exception\n$stackTrace',
+      );
       // Record the exception (for debugging purposes) and record the fact
       // that we should not try to communicate with the plugin.
       pluginIsolate.reportException(CaughtException(exception, stackTrace));
       startedSuccessfully = false;
     }
 
+    instrumentationService.logInfo('Plugin started, adding to map "$path"');
     _pluginMap[path] = pluginIsolate;
 
     _notifyPluginsChanged();
@@ -253,7 +258,13 @@ class PluginManager {
         ?_analysisSetPriorityFilesParams,
       ];
       for (var cachedRequest in cachedRequests) {
+        instrumentationService.logInfo(
+          'Sending plugin cached request: ${jsonEncode(cachedRequest.toJson())}',
+        );
         pluginIsolate.sendRequest(cachedRequest);
+      }
+      if (cachedRequests.isEmpty) {
+        instrumentationService.logInfo('No cached plugin requests');
       }
     }
   }

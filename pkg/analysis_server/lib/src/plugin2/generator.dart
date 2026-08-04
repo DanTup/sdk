@@ -73,7 +73,9 @@ environment:
 dependencies:
   # The version of the analysis_server_plugin package that matches the protocol
   # used by the active analysis_server.
-  analysis_server_plugin: ^0.3.21-dev
+  # DANTUP: Temporarily changed this back to a version that's on Pub to get
+  # the tests running for debugging on the bots.
+  analysis_server_plugin: ^0.3.20
 ''');
 
     for (var configuration in _configurations) {
