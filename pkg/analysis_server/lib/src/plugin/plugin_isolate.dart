@@ -347,6 +347,7 @@ class PluginSession {
 
   /// Handles the given [notification] from [PluginServer].
   void handleNotification(Notification notification) {
+    _isolate._instrumentationService.logInfo('Handling notification');
     if (notification.event == PLUGIN_NOTIFICATION_ERROR) {
       var params = PluginErrorParams.fromNotification(notification);
       if (params.isFatal) {
@@ -362,6 +363,7 @@ class PluginSession {
 
   /// Handles the fact that the plugin has stopped.
   void handleOnDone() {
+    _isolate._instrumentationService.logInfo('Handling onDone!');
     if (channel != null) {
       channel!.close();
       channel = null;
@@ -371,6 +373,7 @@ class PluginSession {
 
   /// Handles the fact that an unhandled error has occurred in the plugin.
   void handleOnError(Object? error) {
+    _isolate._instrumentationService.logInfo('Handling error: $error');
     if (error case [String message, String stackTraceString]) {
       var stackTrace = StackTrace.fromString(stackTraceString);
       var exception = PluginException(message);
@@ -389,6 +392,7 @@ class PluginSession {
   /// Handles a [response] from the plugin by completing the future that was
   /// created when the request was sent.
   void handleResponse(Response response) {
+    _isolate._instrumentationService.logInfo('Handling response');
     var requestData = pendingRequests.remove(response.id);
     if (requestData != null) {
       var responseTime = DateTime.now().millisecondsSinceEpoch;
@@ -488,17 +492,22 @@ class PluginSession {
       return false;
     }
     channel = _isolate._createChannel();
-    // TODO(brianwilkerson): Determine if await is necessary, if so, change the
-    // return type of `channel.listen` to `Future<void>`.
     _isolate._instrumentationService.logInfo(
       'Starting to listen on plugin channel',
     );
-    await (channel!.listen(
-      handleResponse,
-      handleNotification,
-      onDone: handleOnDone,
-      onError: handleOnError,
-    ) as dynamic);
+    // TODO(brianwilkerson): Determine if await is necessary, if so, change the
+    // return type of `channel.listen` to `Future<void>`.
+    try {
+      await (channel!.listen(
+        handleResponse,
+        handleNotification,
+        onDone: handleOnDone,
+        onError: handleOnError,
+      ) as dynamic);
+    } finally {
+      _isolate._instrumentationService.logInfo('channel.listen (finally)');
+    }
+    _isolate._instrumentationService.logInfo('Listening on plugin channel!');
     if (channel == null) {
       // If there is an error when starting the isolate, the channel will invoke
       // `handleOnDone`, which will cause `channel` to be set to `null`.

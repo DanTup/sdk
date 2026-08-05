@@ -81,7 +81,9 @@ final class ServerIsolateChannel implements ServerCommunicationChannel {
     void Function(dynamic error)? onError,
     void Function()? onDone,
   }) async {
+    instrumentationService.logInfo('ServerIsolateChannel.listen() 1');
     if (_isolate != null) {
+      instrumentationService.logInfo('ServerIsolateChannel.listen() 1.1');
       throw StateError('Cannot listen to the same channel more than once.');
     }
 
@@ -92,6 +94,9 @@ final class ServerIsolateChannel implements ServerCommunicationChannel {
       var errorPort = ReceivePort();
       _errorPort = errorPort;
       errorPort.listen((error) {
+        instrumentationService.logInfo(
+          'ServerIsolateChannel.listen() 1.2: message on error port',
+        );
         onError(error);
       });
     }
@@ -100,13 +105,31 @@ final class ServerIsolateChannel implements ServerCommunicationChannel {
       var exitPort = ReceivePort();
       _exitPort = exitPort;
       exitPort.listen((_) {
+        instrumentationService.logInfo(
+          'ServerIsolateChannel.listen() 1.3: message on exit port',
+        );
         onDone();
       });
     }
 
     try {
-      _isolate = await _spawnIsolate();
+      instrumentationService.logInfo(
+        'ServerIsolateChannel.listen() 2: attempting to spawn isolate',
+      );
+      try {
+        _isolate = await _spawnIsolate();
+      } finally {
+        instrumentationService.logInfo(
+          'ServerIsolateChannel.listen() 2.1 finishing spawning isolate',
+        );
+      }
+      instrumentationService.logInfo(
+        'ServerIsolateChannel.listen() 3: did spawn isolate',
+      );
     } catch (exception, stackTrace) {
+      instrumentationService.logInfo(
+        'ServerIsolateChannel.listen() 4: failed to spawn isolate: $exception',
+      );
       instrumentationService.logPluginError(
         PluginData(_pluginId, null, null),
         RequestErrorCode.PLUGIN_ERROR.toString(),
@@ -123,12 +146,19 @@ final class ServerIsolateChannel implements ServerCommunicationChannel {
       return;
     }
 
+    instrumentationService.logInfo('ServerIsolateChannel.listen() 5');
     var channelReady = Completer<void>();
     receivePort.listen((dynamic input) {
       if (input is SendPort) {
+        instrumentationService.logInfo(
+          'ServerIsolateChannel.listen() 5.1: Got SendPort, completing!',
+        );
         _sendPort = input;
         channelReady.complete(null);
       } else if (input is Map<String, Object?>) {
+        instrumentationService.logInfo(
+          'ServerIsolateChannel.listen() 5.2: Got response',
+        );
         if (input.containsKey('id')) {
           var encodedInput = json.encode(input);
           instrumentationService.logPluginResponse(_pluginId, encodedInput);
@@ -139,6 +169,9 @@ final class ServerIsolateChannel implements ServerCommunicationChannel {
           );
           onResponse(Response.fromJson(input));
         } else if (input.containsKey('event')) {
+          instrumentationService.logInfo(
+            'ServerIsolateChannel.listen() 5.3: Got event',
+          );
           var encodedInput = json.encode(input);
           instrumentationService.logPluginNotification(_pluginId, encodedInput);
           _sessionLogger.logMessage(
@@ -151,6 +184,9 @@ final class ServerIsolateChannel implements ServerCommunicationChannel {
       }
     });
 
+    instrumentationService.logInfo(
+      'ServerIsolateChannel.listen() 6: Waiting for SendPort!',
+    );
     return channelReady.future;
   }
 
