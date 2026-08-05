@@ -231,6 +231,7 @@ class PluginManager {
           }
         }),
       );
+      instrumentationService.logInfo('Started plugin "$path"!');
     } catch (exception, stackTrace) {
       instrumentationService.logException(
         'Failed to start plugin "$path": $exception\n$stackTrace',

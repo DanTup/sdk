@@ -226,7 +226,11 @@ class PluginIsolate {
       throw StateError('Cannot start a plugin that is already running.');
     }
     currentSession = PluginSession(this);
+    _instrumentationService.logInfo('calling currentSession.start()...');
     var isRunning = await currentSession!.start(byteStorePath, sdkPath);
+    _instrumentationService.logInfo(
+      'currentSession.start() complete! isRunning? $isRunning',
+    );
     if (!isRunning) {
       currentSession = null;
     }
@@ -464,6 +468,7 @@ class PluginSession {
       throw StateError('Missing byte store path');
     }
     if (!isCompatible) {
+      _isolate._instrumentationService.logInfo('Plugin is not compatible (1)!');
       _isolate.reportException(
         CaughtException(
           PluginException('Plugin is not compatible.'),
@@ -473,6 +478,7 @@ class PluginSession {
       return false;
     }
     if (!_isolate._canBeStarted) {
+      _isolate._instrumentationService.logInfo('Isolate cannot be started!');
       _isolate.reportException(
         CaughtException(
           PluginException('Plugin cannot be started.'),
@@ -484,6 +490,9 @@ class PluginSession {
     channel = _isolate._createChannel();
     // TODO(brianwilkerson): Determine if await is necessary, if so, change the
     // return type of `channel.listen` to `Future<void>`.
+    _isolate._instrumentationService.logInfo(
+      'Starting to listen on plugin channel',
+    );
     await (channel!.listen(
       handleResponse,
       handleNotification,
@@ -493,6 +502,9 @@ class PluginSession {
     if (channel == null) {
       // If there is an error when starting the isolate, the channel will invoke
       // `handleOnDone`, which will cause `channel` to be set to `null`.
+      _isolate._instrumentationService.logInfo(
+        'Unrecorded error while starting the plugin!',
+      );
       _isolate.reportException(
         CaughtException(
           PluginException('Unrecorded error while starting the plugin.'),
@@ -501,6 +513,9 @@ class PluginSession {
       );
       return false;
     }
+    _isolate._instrumentationService.logInfo(
+      'Sending plugin version check request',
+    );
     var response = await sendRequest(
       PluginVersionCheckParams(byteStorePath, sdkPath, '1.0.0-alpha.0'),
     );
@@ -509,8 +524,14 @@ class PluginSession {
     interestingFileGlobs = result.interestingFiles;
     _name = result.name;
     _version = result.version;
+    _isolate._instrumentationService.logInfo(
+      'Plugin isCompat: $isCompatible, name: $_name, version: $_version',
+    );
     if (!isCompatible) {
       unawaited(sendRequest(PluginShutdownParams()));
+      _isolate._instrumentationService.logInfo(
+        'Plugin is not compatible (2), shutting down!',
+      );
       _isolate.reportException(
         CaughtException(
           PluginException('Plugin is not compatible.'),
