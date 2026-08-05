@@ -207,14 +207,52 @@ final class ServerIsolateChannel implements ServerCommunicationChannel {
   }
 
   /// Spawns the isolate in which the plugin is running.
-  Future<Isolate> _spawnIsolate() {
-    return Isolate.spawnUri(
-      _pluginUri,
-      [],
-      _receivePort?.sendPort,
-      onError: _errorPort?.sendPort,
-      onExit: _exitPort?.sendPort,
-      packageConfig: _packageConfigUri,
-    );
+  Future<Isolate> _spawnIsolate() async {
+    instrumentationService.logInfo('''
+Calling _spawnIsolate:
+  uri: $_pluginUri,
+  args: [],
+  messagePort?: $_receivePort,
+  onError?: $_errorPort,
+  onExit?: $_exitPort,
+  packageConfig: $_packageConfigUri
+''');
+
+    var tempMessagePort = ReceivePort();
+    var tempErrorPort = ReceivePort();
+    var tempExitPort = ReceivePort();
+
+    tempMessagePort.listen((data) {
+      instrumentationService.logInfo('Message: $data');
+      _receivePort?.sendPort.send(data);
+    });
+
+    tempErrorPort.listen((data) {
+      instrumentationService.logInfo('Error: $data');
+      _errorPort?.sendPort.send(data);
+    });
+
+    tempExitPort.listen((data) {
+      instrumentationService.logInfo('Exit: $data');
+      _exitPort?.sendPort.send(data);
+    });
+
+    try {
+      instrumentationService.logInfo('calling spawnUri...');
+      var isolate = await Isolate.spawnUri(
+        _pluginUri,
+        [],
+        tempMessagePort.sendPort,
+        onError: tempErrorPort.sendPort,
+        onExit: tempExitPort.sendPort,
+        packageConfig: _packageConfigUri,
+      );
+      instrumentationService.logInfo('spawnUri completed!');
+
+      return isolate;
+    } catch (e) {
+      instrumentationService.logInfo('spawnUri errored! $e');
+      rethrow;
+    }
   }
 }
